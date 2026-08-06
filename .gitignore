@@ -1,0 +1,23 @@
+# dependencies
+node_modules
+.pnpm-store
+
+# testing & logs
+coverage
+*.log
+
+# production / build
+dist
+build
+.next
+
+# dev environment & databases
+.env
+.env.local
+*.sqlite
+*.sqlite-journal
+
+# IDE / OS
+.DS_Store
+.vscode
+.idea

@@ -1,0 +1,702 @@
+import React, { useState, useEffect } from 'react';
+import { 
+  Wrench, 
+  Play, 
+  Square, 
+  Package, 
+  Send, 
+  AlertTriangle, 
+  Clock, 
+  CheckCircle2, 
+  RefreshCw,
+  UserCheck,
+  FileText,
+  Stethoscope,
+  CheckSquare,
+  Square as CheckboxEmpty,
+  CheckCircle,
+  Save,
+  Trash2,
+  Lock,
+  Tag,
+  Calculator
+} from 'lucide-react';
+import { repairService } from '../services/repairService';
+import RequestPartModal from '../components/RequestPartModal';
+import api from '../services/api';
+
+const REPAIR_CATEGORIES = [
+  'Physical Condition (Casing dan Engsel)',
+  'Display (Layar dan Touchscreen)',
+  'Storage & Power (Baterai dan HDD/SSD)',
+  'Input Device (Keyboard dan Touchpad)',
+  'Connectivity Port (Port USB, Port Jack Audio, Port HDMI, Port Charger)',
+  'Audio Visual (Speaker, Microphone, dan Kamera)',
+  'Wireless Connectivity (Bluetooth dan WiFi)'
+];
+
+const Repairs = () => {
+  const [queue, setQueue] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [selectedOrderForPart, setSelectedOrderForPart] = useState(null);
+  const [isPartModalOpen, setIsPartModalOpen] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [nowTime, setNowTime] = useState(Date.now());
+  const [branchPricesMap, setBranchPricesMap] = useState({});
+  
+  // State for diagnostics, categories, & action notes per order ID
+  const [actionNotes, setActionNotes] = useState({});
+  const [diagnosticsOutcome, setDiagnosticsOutcome] = useState({});
+  const [selectedCategories, setSelectedCategories] = useState({});
+  const [savingDiagnostics, setSavingDiagnostics] = useState({});
+
+  useEffect(() => {
+    fetchQueue();
+    fetchBranchPrices();
+  }, []);
+
+  // Live Timer Tick Interval
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setNowTime(Date.now());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const fetchBranchPrices = async () => {
+    try {
+      const res = await api.get('/branches/repair-prices');
+      if (res.data && res.data.success) {
+        const map = {};
+        res.data.data.forEach(p => {
+          map[`${p.branch_id}:${p.category_name}`] = parseFloat(p.price) || 0;
+        });
+        setBranchPricesMap(map);
+      }
+    } catch (err) {
+      console.error('Fetch repair prices error:', err);
+    }
+  };
+
+  const getCategoryPrice = (branchId, catName) => {
+    if (!branchId) return 0;
+    return branchPricesMap[`${branchId}:${catName}`] || 0;
+  };
+
+  // Rule: Taken ONLY the maximum price among selected categories (NOT accumulated)
+  const calculateMaxLaborFee = (branchId, categoriesList = []) => {
+    if (!categoriesList || categoriesList.length === 0) return 0;
+    const prices = categoriesList.map(cat => getCategoryPrice(branchId, cat));
+    return Math.max(...prices);
+  };
+
+  const fetchQueue = async () => {
+    setIsLoading(true);
+    try {
+      const res = await repairService.getWorkQueue();
+      if (res.success) {
+        setQueue(res.data);
+
+        // Pre-populate forms from active log
+        const initialNotes = {};
+        const initialOutcome = {};
+        const initialCat = {};
+
+        res.data.forEach(item => {
+          const sortedLogs = item.repairLogs && item.repairLogs.length > 0 
+            ? [...item.repairLogs].sort((a, b) => b.id - a.id) 
+            : [];
+          const activeLog = sortedLogs.length > 0 ? sortedLogs[0] : null;
+          if (activeLog) {
+            initialNotes[item.id] = activeLog.action_taken || '';
+            initialOutcome[item.id] = activeLog.diagnostics_outcome || '';
+            
+            let cats = [];
+            if (activeLog.repair_categories) {
+              try {
+                cats = typeof activeLog.repair_categories === 'string' ? JSON.parse(activeLog.repair_categories) : activeLog.repair_categories;
+              } catch (e) {
+                cats = [activeLog.repair_categories];
+              }
+            }
+            initialCat[item.id] = Array.isArray(cats) ? cats : [];
+          }
+        });
+
+        setActionNotes(initialNotes);
+        setDiagnosticsOutcome(initialOutcome);
+        setSelectedCategories(initialCat);
+      }
+    } catch (err) {
+      console.error('Fetch work queue error:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const getLiveDurationDisplay = (log) => {
+    if (!log) return '0 Min';
+    const baseMins = log.duration_minutes || 0;
+    if (log.repair_status === 'In Progress' && log.start_time) {
+      const startMs = new Date(log.start_time).getTime();
+      const elapsedMs = Math.max(0, nowTime - startMs);
+      const totalSecs = (baseMins * 60) + Math.floor(elapsedMs / 1000);
+      const m = Math.floor(totalSecs / 60);
+      const s = totalSecs % 60;
+      return `${m}m ${s}s`;
+    }
+    return `${baseMins} Min`;
+  };
+
+  const showToast = (msg) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(''), 4000);
+  };
+
+  const handleCategoryToggle = (orderId, catName, isTimerRunning) => {
+    if (!isTimerRunning) {
+      showToast('⚠️ Klik "Mulai Perbaikan" terlebih dahulu untuk mengaktifkan perubahan kategori perbaikan.');
+      return;
+    }
+    setSelectedCategories(prev => {
+      const currentList = prev[orderId] || [];
+      if (currentList.includes(catName)) {
+        return { ...prev, [orderId]: currentList.filter(c => c !== catName) };
+      } else {
+        return { ...prev, [orderId]: [...currentList, catName] };
+      }
+    });
+  };
+
+  const handleSaveDiagnosticsOnly = async (orderId, isTimerRunning) => {
+    if (!isTimerRunning) {
+      showToast('⚠️ Klik "Mulai Perbaikan" terlebih dahulu untuk menyimpan diagnostik.');
+      return;
+    }
+    setSavingDiagnostics(prev => ({ ...prev, [orderId]: true }));
+    try {
+      const outcome = diagnosticsOutcome[orderId] || '';
+      const categories = selectedCategories[orderId] || [];
+      const note = actionNotes[orderId] || '';
+
+      const res = await repairService.saveDiagnostics(orderId, {
+        diagnostics_outcome: outcome,
+        repair_categories: categories,
+        action_taken: note
+      });
+
+      if (res.success) {
+        showToast('Hasil diagnostik dan kategori perbaikan berhasil disimpan!');
+      }
+    } catch (err) {
+      showToast('Gagal menyimpan hasil diagnostik.');
+    } finally {
+      setSavingDiagnostics(prev => ({ ...prev, [orderId]: false }));
+    }
+  };
+
+  const handleRemovePart = async (orderId, partConsumedId, partName, isTimerRunning) => {
+    if (!isTimerRunning) {
+      showToast('⚠️ Klik "Mulai Perbaikan" terlebih dahulu untuk mengurangi spare part.');
+      return;
+    }
+    if (!window.confirm(`Apakah Anda yakin ingin mengurangi / menghapus spare part '${partName}'? Stok akan dikembalikan ke inventaris.`)) {
+      return;
+    }
+    try {
+      const res = await repairService.removePartConsumed(orderId, partConsumedId);
+      if (res.success) {
+        showToast(res.message);
+        fetchQueue();
+      }
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Gagal mengurangi spare part.');
+    }
+  };
+
+  const handleStartTimer = async (orderId) => {
+    try {
+      const res = await repairService.startTimer(orderId);
+      if (res.success) {
+        showToast(res.message);
+        fetchQueue();
+      }
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Gagal memulai timer.');
+    }
+  };
+
+  const handleStopTimer = async (orderId) => {
+    const note = actionNotes[orderId] || 'Pemberhentian timer sementara / perbaikan dalam proses.';
+    const outcome = diagnosticsOutcome[orderId] || '';
+    const categories = selectedCategories[orderId] || [];
+
+    try {
+      const res = await repairService.stopTimer(orderId, {
+        action_taken: note,
+        diagnostics_outcome: outcome,
+        repair_categories: categories
+      });
+      if (res.success) {
+        showToast(res.message);
+        fetchQueue();
+      }
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Gagal menghentikan timer.');
+    }
+  };
+
+  const handleSubmitQC1 = async (orderId) => {
+    const note = actionNotes[orderId] || 'Perbaikan hardware dan testing fungsional selesai.';
+    const outcome = diagnosticsOutcome[orderId] || '';
+    const categories = selectedCategories[orderId] || [];
+
+    try {
+      // First save diagnostics
+      await repairService.saveDiagnostics(orderId, {
+        diagnostics_outcome: outcome,
+        repair_categories: categories,
+        action_taken: note
+      });
+
+      const res = await repairService.submitToQC1(orderId, note);
+      if (res.success) {
+        showToast(res.message);
+        fetchQueue();
+      }
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Gagal submit ke QC1.');
+    }
+  };
+
+  const calculateTotalCost = (consumedParts = []) => {
+    return consumedParts.reduce((acc, curr) => acc + (parseFloat(curr.total_cost) || 0), 0);
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Toast Alert */}
+      {toastMessage && (
+        <div className="fixed top-20 right-6 z-50 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl border border-slate-700 text-xs flex items-center space-x-2 animate-bounce">
+          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+          <span>{toastMessage}</span>
+        </div>
+      )}
+
+      {/* Title & Refresh */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-bold text-slate-800">
+            Technician Work Queue & Timer
+          </h1>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Pencatatan Waktu Perbaikan, Diagnostik General, Kategori Perbaikan (Tarif Max Cabang), dan Konsumsi Spare Part
+          </p>
+        </div>
+
+        <button
+          onClick={() => {
+            fetchQueue();
+            fetchBranchPrices();
+          }}
+          className="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold rounded-xl shadow-md transition-all flex items-center space-x-2"
+        >
+          <RefreshCw className="w-4 h-4" />
+          <span>Refresh Work Queue</span>
+        </button>
+      </div>
+
+      {/* Queue Items List */}
+      {isLoading ? (
+        <div className="bg-white rounded-2xl p-12 text-center text-slate-400 space-y-3 border border-slate-200">
+          <div className="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+          <p className="text-xs font-semibold">Memuat antrean kerja teknisi...</p>
+        </div>
+      ) : queue.length === 0 ? (
+        <div className="bg-white rounded-2xl p-12 text-center text-slate-400 space-y-2 border border-slate-200">
+          <Wrench className="w-10 h-10 mx-auto text-slate-300" />
+          <p className="font-semibold text-slate-600">Tidak ada unit di antrean perbaikan saat ini.</p>
+          <p className="text-xs">Semua perangkat dalam status siap atau sudah berada di tahap QC.</p>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {queue.map((item) => {
+            const sortedLogs = item.repairLogs && item.repairLogs.length > 0 
+              ? [...item.repairLogs].sort((a, b) => b.id - a.id) 
+              : [];
+            const activeLog = sortedLogs.length > 0 ? sortedLogs[0] : null;
+            const isTimerRunning = activeLog && activeLog.repair_status === 'In Progress';
+            const isRework = item.status === 'Rework';
+            const currentCatList = selectedCategories[item.id] || [];
+
+            // CALCULATION FORMULA:
+            // Total = General Diagnostics Fee + Max Category Price (not accumulated) + Spare Parts Cost
+            const diagnosticsFee = getCategoryPrice(item.branch_id, 'General Diagnostics Fee') || 50000;
+            const maxCategoryLaborFee = calculateMaxLaborFee(item.branch_id, currentCatList);
+            const sparePartsTotal = calculateTotalCost(item.consumedParts);
+            const grandTotal = diagnosticsFee + maxCategoryLaborFee + sparePartsTotal;
+
+            return (
+              <div
+                key={item.id}
+                className={`bg-white rounded-2xl border transition-all shadow-sm ${
+                  isRework ? 'border-red-300 ring-1 ring-red-200' : 'border-slate-200/80 hover:border-slate-300'
+                }`}
+              >
+                {/* SLA Warning Banner if Rework */}
+                {isRework && (
+                  <div className="bg-red-500 text-white px-6 py-2 rounded-t-2xl flex items-center justify-between text-xs font-bold">
+                    <div className="flex items-center space-x-2">
+                      <AlertTriangle className="w-4 h-4 animate-pulse" />
+                      <span>PERINGATAN REWORK SLA: Target Penyelesaian Max 48 Jam!</span>
+                    </div>
+                    <span className="font-mono text-xs bg-red-700 px-2 py-0.5 rounded">
+                      SLA Deadline: {activeLog?.rework_sla_deadline ? new Date(activeLog.rework_sla_deadline).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '48 Hours Limit'}
+                    </span>
+                  </div>
+                )}
+
+                <div className="p-6 space-y-6">
+                  {/* Top Bar Info */}
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-100 pb-4">
+                    <div>
+                      <div className="flex items-center space-x-2">
+                        <span className="font-mono text-xs font-bold text-orange-600 bg-orange-50 border border-orange-200 px-2.5 py-0.5 rounded-full">
+                          {item.service_id}
+                        </span>
+                        <span className="font-mono text-xs font-bold text-cyan-600 bg-cyan-50 border border-cyan-200 px-2.5 py-0.5 rounded-full">
+                          {item.device?.device_id}
+                        </span>
+                        <span className="text-xs font-semibold text-slate-500">
+                          {item.customer?.name}
+                        </span>
+                      </div>
+                      <h3 className="text-base font-bold text-slate-900 mt-1">
+                        {item.device?.brand} {item.device?.model}
+                      </h3>
+                      <p className="text-xs text-slate-400 font-mono mt-0.5">
+                        SN: {item.device?.serial_number} | Asset: {item.device?.asset_type}
+                      </p>
+                    </div>
+
+                    {/* Timer Control Box */}
+                    <div className="flex items-center gap-3">
+                      <div className="bg-slate-900 text-white px-4 py-2 rounded-xl text-center font-mono shadow-inner min-w-36">
+                        <div className="text-[10px] text-slate-400 uppercase tracking-wider">Durasi Kerja</div>
+                        <div className={`text-sm font-bold flex items-center justify-center gap-1.5 ${
+                          isTimerRunning ? 'text-emerald-400 animate-pulse' : 'text-slate-400'
+                        }`}>
+                          <Clock className="w-3.5 h-3.5" />
+                          <span>{getLiveDurationDisplay(activeLog)}</span>
+                        </div>
+                      </div>
+
+                      {isTimerRunning ? (
+                        <button
+                          onClick={() => handleStopTimer(item.id)}
+                          className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl shadow-md transition-colors flex items-center space-x-1.5"
+                        >
+                          <Square className="w-4 h-4 fill-white" />
+                          <span>Stop / Pause Timer</span>
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleStartTimer(item.id)}
+                          className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-md transition-colors flex items-center space-x-1.5"
+                        >
+                          <Play className="w-4 h-4 fill-white" />
+                          <span>Mulai Perbaikan</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Timer Paused Lock Notice Banner */}
+                  {!isTimerRunning && (
+                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs flex items-center justify-between text-amber-900">
+                      <div className="flex items-center space-x-2">
+                        <Lock className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                        <span>
+                          <strong>Sesi Perbaikan Non-Aktif / Paused.</strong> Pengisian General Diagnostics, Kategori Perbaikan, & Spare Part terkunci.
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleStartTimer(item.id)}
+                        className="text-[11px] font-bold text-emerald-800 bg-emerald-100 hover:bg-emerald-200 border border-emerald-300 px-3 py-1 rounded-lg transition-colors flex items-center space-x-1"
+                      >
+                        <Play className="w-3 h-3 fill-emerald-800" />
+                        <span>Klik Mulai Perbaikan</span>
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Fault Info & Action Taken Notes */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Fault Info */}
+                    <div className="bg-amber-50/60 border border-amber-200/80 p-4 rounded-xl space-y-1">
+                      <span className="text-[11px] font-bold uppercase text-amber-800 tracking-wider block">
+                        Keluhan Kerusakan (Initial Fault):
+                      </span>
+                      <p className="text-xs text-amber-900 leading-relaxed font-medium">
+                        {item.fault_description}
+                      </p>
+                    </div>
+
+                    {/* Action Taken Input */}
+                    <div className="space-y-1">
+                      <label className="block text-xs font-semibold text-slate-700">
+                        Catatan Tindakan Perbaikan (Action Taken):
+                      </label>
+                      <textarea
+                        rows="2"
+                        disabled={!isTimerRunning}
+                        value={actionNotes[item.id] || ''}
+                        onChange={(e) => setActionNotes({ ...actionNotes, [item.id]: e.target.value })}
+                        placeholder={isTimerRunning ? "Tuliskan langkah tindakan perbaikan atau penggantian yang dilakukan..." : "Klik 'Mulai Perbaikan' untuk mengisi catatan..."}
+                        className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-cyan-500 focus:outline-none disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed"
+                      ></textarea>
+                    </div>
+                  </div>
+
+                  {/* SECTION 1: General Diagnostics & Outcome */}
+                  <div className={`border p-4 rounded-2xl space-y-3 transition-all ${
+                    isTimerRunning ? 'bg-indigo-50/70 border-indigo-200/80' : 'bg-slate-100/70 border-slate-200 opacity-75'
+                  }`}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <Stethoscope className={`w-4 h-4 ${isTimerRunning ? 'text-indigo-600' : 'text-slate-400'}`} />
+                        <span className={`text-xs font-bold uppercase tracking-wider ${isTimerRunning ? 'text-indigo-900' : 'text-slate-600'}`}>
+                          General Diagnostics (Tarif: Rp {diagnosticsFee.toLocaleString('id-ID')})
+                        </span>
+                        {!isTimerRunning && <Lock className="w-3.5 h-3.5 text-slate-400" />}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleSaveDiagnosticsOnly(item.id, isTimerRunning)}
+                        disabled={!isTimerRunning || savingDiagnostics[item.id]}
+                        className="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-[11px] font-semibold transition-colors flex items-center space-x-1 shadow-xs disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        <Save className="w-3.5 h-3.5" />
+                        <span>{savingDiagnostics[item.id] ? 'Menyimpan...' : 'Simpan Diagnostik'}</span>
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Left: General Diagnostics Info */}
+                      <div className="bg-white p-3.5 rounded-xl border border-indigo-100 space-y-1 text-xs">
+                        <span className="font-bold text-indigo-900 block">Pemeriksaan Awal (General Check):</span>
+                        <p className="text-slate-600 text-[11px] leading-relaxed">
+                          Pemeriksaan fungsional motherboard, kondisi power delivery, tegangan charging, dan kestabilan sistem perangkat.
+                        </p>
+                      </div>
+
+                      {/* Right: Textbox Outcome */}
+                      <div className="space-y-1">
+                        <label className="block text-xs font-bold text-indigo-900 flex items-center justify-between">
+                          <span>Hasil Outcome Diagnostik:</span>
+                          {!isTimerRunning && <span className="text-[10px] text-amber-700 font-normal">🔒 Terkunci (Timer Off)</span>}
+                        </label>
+                        <textarea
+                          rows="2"
+                          disabled={!isTimerRunning}
+                          value={diagnosticsOutcome[item.id] || ''}
+                          onChange={(e) => setDiagnosticsOutcome({ ...diagnosticsOutcome, [item.id]: e.target.value })}
+                          placeholder={isTimerRunning ? "Tuliskan hasil temuan diagnostik (misal: Motherboard normal, IC Power short)..." : "Klik 'Mulai Perbaikan' untuk mengisi outcome diagnostik..."}
+                          className="w-full bg-white border border-indigo-200 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed"
+                        ></textarea>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* SECTION 2: Kategori Perbaikan (Checkbox + Branch Pricing) */}
+                  <div className={`p-4 rounded-2xl border space-y-3 transition-all ${
+                    isTimerRunning ? 'bg-slate-50 border-slate-200' : 'bg-slate-100/70 border-slate-200 opacity-75'
+                  }`}>
+                    <div className="flex items-center justify-between border-b border-slate-200/80 pb-2">
+                      <div className="flex items-center space-x-2">
+                        <CheckSquare className={`w-4 h-4 ${isTimerRunning ? 'text-cyan-600' : 'text-slate-400'}`} />
+                        <span className={`text-xs font-bold uppercase tracking-wider ${isTimerRunning ? 'text-slate-800' : 'text-slate-600'}`}>
+                          Kategori Perbaikan (Pilih Kategori Komponen):
+                        </span>
+                      </div>
+                      {!isTimerRunning && (
+                        <span className="text-[11px] font-semibold text-amber-700 flex items-center space-x-1">
+                          <Lock className="w-3 h-3" />
+                          <span>Pilihan Terkunci</span>
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5 pt-1 text-xs">
+                      {REPAIR_CATEGORIES.map((cat, idx) => {
+                        const isChecked = currentCatList.includes(cat);
+                        const price = getCategoryPrice(item.branch_id, cat);
+
+                        return (
+                          <label
+                            key={cat}
+                            onClick={() => handleCategoryToggle(item.id, cat, isTimerRunning)}
+                            className={`p-2.5 rounded-xl border flex items-center space-x-2.5 select-none transition-all ${
+                              !isTimerRunning 
+                                ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed opacity-75' 
+                                : isChecked 
+                                  ? 'bg-cyan-50 border-cyan-400 text-cyan-900 font-bold shadow-xs cursor-pointer' 
+                                  : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300 cursor-pointer'
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              disabled={!isTimerRunning}
+                              readOnly
+                              className="rounded text-cyan-600 focus:ring-cyan-500 w-4 h-4 disabled:opacity-50 flex-shrink-0"
+                            />
+                            <div className="text-[11px] leading-tight flex-1">
+                              <div><span className="font-mono text-cyan-700 font-bold">{idx + 1}.</span> {cat}</div>
+                              <div className="font-mono text-[10px] text-cyan-800 font-semibold mt-0.5">
+                                Tarif: Rp {price.toLocaleString('id-ID')}
+                              </div>
+                            </div>
+                          </label>
+                        );
+                      })}
+                    </div>
+
+                    <div className="flex justify-between items-center pt-2.5 border-t border-slate-200 text-xs font-bold bg-cyan-50/50 p-2.5 rounded-xl border border-cyan-100">
+                      <div className="space-y-0.5">
+                        <span className="text-slate-800 flex items-center space-x-1.5 font-bold">
+                          <Tag className="w-3.5 h-3.5 text-cyan-600" />
+                          <span>Biaya Kategori Perbaikan ({currentCatList.length} Dicentang):</span>
+                        </span>
+                        <p className="text-[10px] text-slate-500 font-normal italic">
+                          (Diambil dari nilai tertinggi di antara kategori yang dipilih, bukan akumulasi)
+                        </p>
+                      </div>
+                      <span className="text-cyan-700 font-mono text-sm font-extrabold">
+                        Rp {maxCategoryLaborFee.toLocaleString('id-ID')}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* SECTION 3: Consumed Spare Parts Section */}
+                  <div className={`p-4 rounded-2xl border space-y-3 transition-all ${
+                    isTimerRunning ? 'bg-slate-50 border-slate-200' : 'bg-slate-100/70 border-slate-200 opacity-75'
+                  }`}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <Package className={`w-4 h-4 ${isTimerRunning ? 'text-cyan-600' : 'text-slate-400'}`} />
+                        <span className={`text-xs font-bold uppercase tracking-wider ${isTimerRunning ? 'text-slate-800' : 'text-slate-600'}`}>
+                          Spare Part Digunakan ({item.consumedParts?.length || 0})
+                        </span>
+                        {!isTimerRunning && <Lock className="w-3.5 h-3.5 text-slate-400" />}
+                      </div>
+
+                      <button
+                        onClick={() => {
+                          if (!isTimerRunning) {
+                            showToast('⚠️ Klik "Mulai Perbaikan" terlebih dahulu untuk menambah spare part.');
+                            return;
+                          }
+                          setSelectedOrderForPart(item);
+                          setIsPartModalOpen(true);
+                        }}
+                        disabled={!isTimerRunning}
+                        className="px-3.5 py-1.5 bg-cyan-600 hover:bg-cyan-700 text-white rounded-xl text-[11px] font-bold transition-colors flex items-center space-x-1.5 shadow-xs disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        <Package className="w-3.5 h-3.5" />
+                        <span>+ Request Spare Part</span>
+                      </button>
+                    </div>
+
+                    {item.consumedParts && item.consumedParts.length > 0 ? (
+                      <div className="space-y-1.5 text-xs">
+                        {item.consumedParts.map((cp) => (
+                          <div key={cp.id} className="flex justify-between items-center bg-white p-2.5 rounded-lg border border-slate-200">
+                            <div className="flex items-center space-x-2">
+                              <span className="font-mono text-slate-500 text-[10px]">[{cp.part?.part_number}]</span>
+                              <span className="font-semibold text-slate-800">{cp.part?.name}</span>
+                              <span className="text-slate-400 font-mono text-[11px]">x{cp.quantity}</span>
+                            </div>
+                            <div className="flex items-center space-x-3">
+                              <span className="font-mono font-bold text-slate-800">
+                                Rp {parseInt(cp.total_cost).toLocaleString('id-ID')}
+                              </span>
+                              <button
+                                type="button"
+                                disabled={!isTimerRunning}
+                                onClick={() => handleRemovePart(item.id, cp.id, cp.part?.name || 'Part', isTimerRunning)}
+                                className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                                title={isTimerRunning ? "Kurangi / Hapus Spare Part ini" : "Klik 'Mulai Perbaikan' untuk mengurangi part"}
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                        <div className="flex justify-between items-center pt-2 text-xs font-bold border-t border-slate-200">
+                          <span className="text-slate-600">Total Biaya Spare Part:</span>
+                          <span className="text-cyan-700 font-mono">Rp {sparePartsTotal.toLocaleString('id-ID')}</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-[11px] text-slate-400 italic">Belum ada spare part yang dikonsumsi untuk unit ini.</p>
+                    )}
+                  </div>
+
+                  {/* Summary Grand Total Formula Breakdown & Submit to QC1 */}
+                  <div className="pt-3 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div className="bg-slate-900 text-white p-3.5 rounded-2xl space-y-1.5 font-mono shadow-inner border border-slate-800">
+                      <div className="flex items-center justify-between text-[11px] text-slate-400 font-bold uppercase tracking-wider space-x-4">
+                        <span className="flex items-center space-x-1">
+                          <Calculator className="w-3.5 h-3.5 text-cyan-400" />
+                          <span>Rincian Formula Total Biaya:</span>
+                        </span>
+                        <span className="text-slate-500 font-normal">Diag + Max(Kategori) + Spare Parts</span>
+                      </div>
+                      <div className="text-xs text-slate-300 flex flex-wrap items-center gap-2 pt-1 border-t border-slate-800">
+                        <span>Diag: <strong className="text-white">Rp {diagnosticsFee.toLocaleString('id-ID')}</strong></span>
+                        <span>+</span>
+                        <span>Max Kat: <strong className="text-cyan-300">Rp {maxCategoryLaborFee.toLocaleString('id-ID')}</strong></span>
+                        <span>+</span>
+                        <span>Spare Part: <strong className="text-emerald-300">Rp {sparePartsTotal.toLocaleString('id-ID')}</strong></span>
+                        <span>=</span>
+                        <span className="text-base font-extrabold text-amber-400 bg-slate-800 px-2.5 py-0.5 rounded-lg border border-amber-400/30">
+                          Rp {grandTotal.toLocaleString('id-ID')}
+                        </span>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => handleSubmitQC1(item.id)}
+                      className="px-5 py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white text-xs font-bold rounded-xl shadow-md shadow-orange-500/20 transition-all flex items-center space-x-2 self-end sm:self-auto"
+                    >
+                      <Send className="w-4 h-4" />
+                      <span>Selesai Perbaikan & Submit ke QC1 Arisa</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Modal Request Part */}
+      <RequestPartModal
+        isOpen={isPartModalOpen}
+        onClose={() => {
+          setIsPartModalOpen(false);
+          setSelectedOrderForPart(null);
+        }}
+        order={selectedOrderForPart}
+        onSuccess={(msg) => {
+          showToast(msg);
+          fetchQueue();
+        }}
+      />
+    </div>
+  );
+};
+
+export default Repairs;
