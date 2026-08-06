@@ -7,7 +7,8 @@ import {
   CheckCircle2, 
   Package, 
   BarChart3, 
-  Users
+  Users,
+  FileText
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -20,7 +21,7 @@ const Sidebar = () => {
     { key: 'repairs', name: 'Repair Queue', path: '/repairs', icon: Wrench, defaultRoles: ['Admin', 'Coordinator', 'Technician'] },
     { key: 'qc', name: 'QC Checkpoints', path: '/qc', icon: CheckCircle2, defaultRoles: ['Admin', 'Coordinator', 'QA_Liaison', 'Technician'] },
     { key: 'parts', name: 'Parts Inventory', path: '/parts', icon: Package, defaultRoles: ['Admin', 'Coordinator', 'Technician'] },
-    { key: 'reports', name: 'KPI Reports', path: '/reports', icon: BarChart3, defaultRoles: ['Admin', 'Coordinator', 'QA_Liaison'] },
+    { key: 'reports', name: 'KPI Reports & BAST', path: '/reports', icon: FileText, defaultRoles: ['Admin', 'Coordinator', 'QA_Liaison'] },
     { key: 'admin', name: 'Admin & Users', path: '/admin', icon: Users, defaultRoles: ['Admin', 'Coordinator'] },
   ];
 
@@ -28,7 +29,7 @@ const Sidebar = () => {
   const filteredNav = navItems.filter(item => {
     if (!user) return false;
     if (permissions && permissions.length > 0) {
-      return permissions.includes(item.key);
+      return permissions.includes(item.key) || permissions.includes('reports');
     }
     return item.defaultRoles.includes(user.role);
   });
