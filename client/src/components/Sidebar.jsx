@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   Laptop, 
@@ -8,12 +8,15 @@ import {
   Package, 
   BarChart3, 
   Users,
-  FileText
+  FileText,
+  Printer,
+  ChevronRight
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const Sidebar = () => {
   const { user, permissions } = useAuth();
+  const location = useLocation();
 
   const navItems = [
     { key: 'dashboard', name: 'Dashboard', path: '/', icon: LayoutDashboard, defaultRoles: ['Admin', 'Coordinator', 'QA_Liaison', 'Technician'] },
@@ -33,6 +36,8 @@ const Sidebar = () => {
     }
     return item.defaultRoles.includes(user.role);
   });
+
+  const isReportsActive = location.pathname.startsWith('/reports') || location.pathname.startsWith('/bast-documents');
 
   return (
     <aside className="w-64 bg-[#1e222d] text-slate-300 min-h-screen flex flex-col flex-shrink-0 shadow-xl select-none">
@@ -54,80 +59,57 @@ const Sidebar = () => {
       </div>
 
       {/* Navigation List */}
-      <div className="flex-1 py-6 px-3 space-y-1.5 overflow-y-auto">
+      <div className="flex-1 py-6 px-3 space-y-1 overflow-y-auto">
         <div className="px-3 pb-2 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
           Main Menu
         </div>
 
         {filteredNav.map((item) => {
           const Icon = item.icon;
+          const isItemActive = location.pathname === item.path || (item.key === 'reports' && isReportsActive);
+
           return (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              className={({ isActive }) =>
-                `flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
-                  isActive
-                    ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-md shadow-cyan-600/20 font-semibold'
-                    : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/60'
-                }`
-              }
-            >
-              <Icon className="w-5 h-5 flex-shrink-0" />
-              <span>{item.name}</span>
-            </NavLink>
+            <React.Fragment key={item.path}>
+              <NavLink
+                to={item.path}
+                className={() =>
+                  `flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+                    isItemActive
+                      ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-md shadow-cyan-600/20 font-semibold'
+                      : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/60'
+                  }`
+                }
+              >
+                <div className="flex items-center space-x-3">
+                  <Icon className="w-5 h-5 flex-shrink-0" />
+                  <span>{item.name}</span>
+                </div>
+                {item.key === 'reports' && (
+                  <ChevronRight className={`w-4 h-4 transition-transform duration-200 ${isReportsActive ? 'rotate-90 text-white' : 'text-slate-500'}`} />
+                )}
+              </NavLink>
+
+              {/* Submenu "Dokumen BAST Handover" only appears when "KPI Reports & BAST" is active/clicked */}
+              {item.key === 'reports' && isReportsActive && (
+                <div className="pl-6 pr-1 py-1 space-y-1 border-l-2 border-orange-500/40 ml-4 my-1">
+                  <NavLink
+                    to="/bast-documents"
+                    className={({ isActive }) =>
+                      `flex items-center space-x-2.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all ${
+                        location.pathname === '/bast-documents'
+                          ? 'bg-orange-500/20 text-orange-300 font-bold border border-orange-500/40 shadow-xs'
+                          : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/50'
+                      }`
+                    }
+                  >
+                    <Printer className="w-3.5 h-3.5 text-orange-400 flex-shrink-0" />
+                    <span>Dokumen BAST Handover</span>
+                  </NavLink>
+                </div>
+              )}
+            </React.Fragment>
           );
         })}
-
-        {/* SUB-MENU SECTION: DOKUMEN BAST HANDOVER */}
-        <div className="pt-4 px-3 pb-2 text-[11px] font-semibold text-orange-400 uppercase tracking-wider flex items-center justify-between border-t border-slate-800/60 mt-4">
-          <span>Dokumen BAST Handover</span>
-        </div>
-
-        <NavLink
-          to="/bast-documents?type=1"
-          className={({ isActive }) => {
-            const isSubActive = window.location.pathname === '/bast-documents' && new URLSearchParams(window.location.search).get('type') === '1';
-            return `flex items-center space-x-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
-              isSubActive
-                ? 'bg-orange-500/20 text-orange-300 font-bold border border-orange-500/40'
-                : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/50'
-            }`;
-          }}
-        >
-          <FileText className="w-4 h-4 text-orange-400 flex-shrink-0" />
-          <span>📋 BAST Shopee ➔ Arisa</span>
-        </NavLink>
-
-        <NavLink
-          to="/bast-documents?type=2"
-          className={({ isActive }) => {
-            const isSubActive = window.location.pathname === '/bast-documents' && new URLSearchParams(window.location.search).get('type') === '2';
-            return `flex items-center space-x-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
-              isSubActive
-                ? 'bg-cyan-500/20 text-cyan-300 font-bold border border-cyan-500/40'
-                : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/50'
-            }`;
-          }}
-        >
-          <FileText className="w-4 h-4 text-cyan-400 flex-shrink-0" />
-          <span>🔄 BAST Arisa ➔ Shopee</span>
-        </NavLink>
-
-        <NavLink
-          to="/bast-documents?type=3"
-          className={({ isActive }) => {
-            const isSubActive = window.location.pathname === '/bast-documents' && new URLSearchParams(window.location.search).get('type') === '3';
-            return `flex items-center space-x-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
-              isSubActive
-                ? 'bg-rose-500/20 text-rose-300 font-bold border border-rose-500/40'
-                : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/50'
-            }`;
-          }}
-        >
-          <FileText className="w-4 h-4 text-rose-400 flex-shrink-0" />
-          <span>🛠️ BAST Used Spare Parts</span>
-        </NavLink>
       </div>
 
       {/* Footer / System Status */}
