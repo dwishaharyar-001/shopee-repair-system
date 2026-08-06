@@ -1,8 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { X, Package, Plus, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 import { repairService } from '../services/repairService';
 
 const RequestPartModal = ({ isOpen, onClose, order, onSuccess }) => {
+  const { user } = useAuth();
+  const isHidePrices = user?.role === 'Technician' || user?.role === 'QA_Liaison';
+
   const [parts, setParts] = useState([]);
   const [selectedPartId, setSelectedPartId] = useState('');
   const [quantity, setQuantity] = useState(1);
@@ -110,7 +114,7 @@ const RequestPartModal = ({ isOpen, onClose, order, onSuccess }) => {
             >
               {parts.map(p => (
                 <option key={p.id} value={p.id} disabled={p.stock_quantity <= 0}>
-                  [{p.category}] {p.name} — Stok: {p.stock_quantity} (Rp {parseInt(p.unit_cost).toLocaleString('id-ID')})
+                  [{p.category}] {p.name} — Stok: {p.stock_quantity} {!isHidePrices ? `(Rp ${parseInt(p.unit_cost).toLocaleString('id-ID')})` : ''}
                 </option>
               ))}
             </select>
@@ -122,12 +126,14 @@ const RequestPartModal = ({ isOpen, onClose, order, onSuccess }) => {
                 <span className="text-slate-500">Nomor Part:</span>
                 <span className="font-mono font-bold text-slate-800">{selectedPart.part_number}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">Harga Satuan:</span>
-                <span className="font-semibold text-slate-800">
-                  Rp {parseInt(selectedPart.unit_cost).toLocaleString('id-ID')}
-                </span>
-              </div>
+              {!isHidePrices && (
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Harga Satuan:</span>
+                  <span className="font-semibold text-slate-800">
+                    Rp {parseInt(selectedPart.unit_cost).toLocaleString('id-ID')}
+                  </span>
+                </div>
+              )}
               <div className="flex justify-between">
                 <span className="text-slate-500">Sisa Stok Inventaris:</span>
                 <span className={`font-bold ${selectedPart.stock_quantity <= selectedPart.min_stock_trigger ? 'text-red-600' : 'text-emerald-600'}`}>
@@ -154,12 +160,14 @@ const RequestPartModal = ({ isOpen, onClose, order, onSuccess }) => {
           </div>
 
           {/* Total Cost Summary */}
-          <div className="pt-2 border-t border-slate-100 flex justify-between items-center text-xs">
-            <span className="font-semibold text-slate-600">Total Biaya Konsumsi:</span>
-            <span className="text-base font-extrabold text-cyan-600 font-mono">
-              Rp {totalCost.toLocaleString('id-ID')}
-            </span>
-          </div>
+          {!isHidePrices && (
+            <div className="pt-2 border-t border-slate-100 flex justify-between items-center text-xs">
+              <span className="font-semibold text-slate-600">Total Biaya Konsumsi:</span>
+              <span className="text-base font-extrabold text-cyan-600 font-mono">
+                Rp {totalCost.toLocaleString('id-ID')}
+              </span>
+            </div>
+          )}
 
           {/* Action Buttons */}
           <div className="pt-4 border-t border-slate-100 flex items-center justify-end space-x-3">

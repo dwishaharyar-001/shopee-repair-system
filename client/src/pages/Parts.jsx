@@ -13,12 +13,16 @@ import {
   SlidersHorizontal,
   MapPin
 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 import { inventoryService } from '../services/inventoryService';
 import api from '../services/api';
 import AddPartModal from '../components/AddPartModal';
 import HarvestPartModal from '../components/HarvestPartModal';
 
 const Parts = () => {
+  const { user } = useAuth();
+  const isHidePrices = user?.role === 'Technician' || user?.role === 'QA_Liaison';
+
   const [activeTab, setActiveTab] = useState('inventory'); // 'inventory', 'harvest'
   const [parts, setParts] = useState([]);
   const [branches, setBranches] = useState([]);
@@ -117,7 +121,7 @@ const Parts = () => {
             Parts Inventory & Harvesting Management
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            Real-Time Stock Levels Per Cabang, Reorder Triggers, Cost Tracking, dan Pemanenan Part Kanibal
+            Real-Time Stock Levels Per Cabang, Reorder Triggers{!isHidePrices ? ', Cost Tracking,' : ''} dan Pemanenan Part Kanibal
           </p>
         </div>
 
@@ -141,7 +145,7 @@ const Parts = () => {
       </div>
 
       {/* Analytics Summary Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className={`grid grid-cols-2 ${!isHidePrices ? 'sm:grid-cols-4' : 'sm:grid-cols-3'} gap-4`}>
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center space-x-4">
           <div className="p-3 bg-cyan-100 text-cyan-700 rounded-xl">
             <Package className="w-6 h-6" />
@@ -152,17 +156,19 @@ const Parts = () => {
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center space-x-4">
-          <div className="p-3 bg-emerald-100 text-emerald-700 rounded-xl">
-            <DollarSign className="w-6 h-6" />
-          </div>
-          <div>
-            <span className="text-[11px] font-semibold text-slate-400 uppercase">Valuasi Stok Inventaris</span>
-            <div className="text-lg font-extrabold text-emerald-700">
-              Rp {parseInt(metrics.totalValuation || 0).toLocaleString('id-ID')}
+        {!isHidePrices && (
+          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center space-x-4">
+            <div className="p-3 bg-emerald-100 text-emerald-700 rounded-xl">
+              <DollarSign className="w-6 h-6" />
+            </div>
+            <div>
+              <span className="text-[11px] font-semibold text-slate-400 uppercase">Valuasi Stok Inventaris</span>
+              <div className="text-lg font-extrabold text-emerald-700">
+                Rp {parseInt(metrics.totalValuation || 0).toLocaleString('id-ID')}
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center space-x-4">
           <div className="p-3 bg-red-100 text-red-700 rounded-xl">
@@ -299,7 +305,7 @@ const Parts = () => {
                       <th className="py-3 px-4">Kategori</th>
                       <th className="py-3 px-4">Stok Saat Ini</th>
                       <th className="py-3 px-4">Min Trigger</th>
-                      <th className="py-3 px-4">Harga Satuan (Rp)</th>
+                      {!isHidePrices && <th className="py-3 px-4">Harga Satuan (Rp)</th>}
                       <th className="py-3 px-4">Status Reorder</th>
                     </tr>
                   </thead>
@@ -335,9 +341,11 @@ const Parts = () => {
                           <td className="py-3.5 px-4 font-mono text-slate-500 font-semibold">
                             {item.min_stock_trigger}
                           </td>
-                          <td className="py-3.5 px-4 font-mono font-bold text-slate-800">
-                            Rp {parseInt(item.unit_cost).toLocaleString('id-ID')}
-                          </td>
+                          {!isHidePrices && (
+                            <td className="py-3.5 px-4 font-mono font-bold text-slate-800">
+                              Rp {parseInt(item.unit_cost).toLocaleString('id-ID')}
+                            </td>
+                          )}
                           <td className="py-3.5 px-4">
                             {isLow ? (
                               <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-red-100 text-red-700 border border-red-200 flex items-center space-x-1 w-fit">

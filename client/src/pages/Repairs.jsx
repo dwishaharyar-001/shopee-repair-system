@@ -22,6 +22,7 @@ import {
   Calculator,
   AlertOctagon
 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 import { repairService } from '../services/repairService';
 import RequestPartModal from '../components/RequestPartModal';
 import BrokenPartModal from '../components/BrokenPartModal';
@@ -38,6 +39,9 @@ const REPAIR_CATEGORIES = [
 ];
 
 const Repairs = () => {
+  const { user } = useAuth();
+  const isHidePrices = user?.role === 'Technician' || user?.role === 'QA_Liaison';
+
   const [queue, setQueue] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedOrderForPart, setSelectedOrderForPart] = useState(null);
@@ -316,7 +320,7 @@ const Repairs = () => {
             Technician Work Queue & Timer
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            Pencatatan Waktu Perbaikan, Diagnostik General, Kategori Perbaikan (Tarif Max Cabang), dan Konsumsi Spare Part
+            Pencatatan Waktu Perbaikan, Diagnostik General, Kategori Perbaikan{!isHidePrices ? ' (Tarif Max Cabang)' : ''}, dan Konsumsi Spare Part
           </p>
         </div>
 
@@ -443,7 +447,7 @@ const Repairs = () => {
                       <div className="flex items-center space-x-2">
                         <Lock className="w-4 h-4 text-amber-600 flex-shrink-0" />
                         <span>
-                          <strong>Sesi Perbaikan Non-Aktif / Paused.</strong> Pengisian General Diagnostics, Kategori Perbaikan, & Spare Part terkunci.
+                          <strong>Sesi Perbaikan Non-Aktif / Paused.</strong> Seluruh kontrol, pengisian diagnostik, kategori, & spare part terkunci.
                         </span>
                       </div>
                       <button
@@ -493,7 +497,7 @@ const Repairs = () => {
                       <div className="flex items-center space-x-2">
                         <Stethoscope className={`w-4 h-4 ${isTimerRunning ? 'text-indigo-600' : 'text-slate-400'}`} />
                         <span className={`text-xs font-bold uppercase tracking-wider ${isTimerRunning ? 'text-indigo-900' : 'text-slate-600'}`}>
-                          General Diagnostics (Tarif: Rp {diagnosticsFee.toLocaleString('id-ID')})
+                          General Diagnostics{!isHidePrices ? ` (Tarif: Rp ${diagnosticsFee.toLocaleString('id-ID')})` : ''}
                         </span>
                         {!isTimerRunning && <Lock className="w-3.5 h-3.5 text-slate-400" />}
                       </div>
@@ -580,29 +584,33 @@ const Repairs = () => {
                             />
                             <div className="text-[11px] leading-tight flex-1">
                               <div><span className="font-mono text-cyan-700 font-bold">{idx + 1}.</span> {cat}</div>
-                              <div className="font-mono text-[10px] text-cyan-800 font-semibold mt-0.5">
-                                Tarif: Rp {price.toLocaleString('id-ID')}
-                              </div>
+                              {!isHidePrices && (
+                                <div className="font-mono text-[10px] text-cyan-800 font-semibold mt-0.5">
+                                  Tarif: Rp {price.toLocaleString('id-ID')}
+                                </div>
+                              )}
                             </div>
                           </label>
                         );
                       })}
                     </div>
 
-                    <div className="flex justify-between items-center pt-2.5 border-t border-slate-200 text-xs font-bold bg-cyan-50/50 p-2.5 rounded-xl border border-cyan-100">
-                      <div className="space-y-0.5">
-                        <span className="text-slate-800 flex items-center space-x-1.5 font-bold">
-                          <Tag className="w-3.5 h-3.5 text-cyan-600" />
-                          <span>Biaya Kategori Perbaikan ({currentCatList.length} Dicentang):</span>
+                    {!isHidePrices && (
+                      <div className="flex justify-between items-center pt-2.5 border-t border-slate-200 text-xs font-bold bg-cyan-50/50 p-2.5 rounded-xl border border-cyan-100">
+                        <div className="space-y-0.5">
+                          <span className="text-slate-800 flex items-center space-x-1.5 font-bold">
+                            <Tag className="w-3.5 h-3.5 text-cyan-600" />
+                            <span>Biaya Kategori Perbaikan ({currentCatList.length} Dicentang):</span>
+                          </span>
+                          <p className="text-[10px] text-slate-500 font-normal italic">
+                            (Diambil dari nilai tertinggi di antara kategori yang dipilih, bukan akumulasi)
+                          </p>
+                        </div>
+                        <span className="text-cyan-700 font-mono text-sm font-extrabold">
+                          Rp {maxCategoryLaborFee.toLocaleString('id-ID')}
                         </span>
-                        <p className="text-[10px] text-slate-500 font-normal italic">
-                          (Diambil dari nilai tertinggi di antara kategori yang dipilih, bukan akumulasi)
-                        </p>
                       </div>
-                      <span className="text-cyan-700 font-mono text-sm font-extrabold">
-                        Rp {maxCategoryLaborFee.toLocaleString('id-ID')}
-                      </span>
-                    </div>
+                    )}
                   </div>
 
                   {/* SECTION 3: Consumed Spare Parts Section */}
@@ -645,9 +653,11 @@ const Repairs = () => {
                               <span className="text-slate-400 font-mono text-[11px]">x{cp.quantity}</span>
                             </div>
                             <div className="flex items-center space-x-3">
-                              <span className="font-mono font-bold text-slate-800">
-                                Rp {parseInt(cp.total_cost).toLocaleString('id-ID')}
-                              </span>
+                              {!isHidePrices && (
+                                <span className="font-mono font-bold text-slate-800">
+                                  Rp {parseInt(cp.total_cost).toLocaleString('id-ID')}
+                                </span>
+                              )}
                               <button
                                 type="button"
                                 disabled={!isTimerRunning}
@@ -660,10 +670,12 @@ const Repairs = () => {
                             </div>
                           </div>
                         ))}
-                        <div className="flex justify-between items-center pt-2 text-xs font-bold border-t border-slate-200">
-                          <span className="text-slate-600">Total Biaya Spare Part:</span>
-                          <span className="text-cyan-700 font-mono">Rp {sparePartsTotal.toLocaleString('id-ID')}</span>
-                        </div>
+                        {!isHidePrices && (
+                          <div className="flex justify-between items-center pt-2 text-xs font-bold border-t border-slate-200">
+                            <span className="text-slate-600">Total Biaya Spare Part:</span>
+                            <span className="text-cyan-700 font-mono">Rp {sparePartsTotal.toLocaleString('id-ID')}</span>
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <p className="text-[11px] text-slate-400 italic">Belum ada spare part yang dikonsumsi untuk unit ini.</p>
@@ -744,30 +756,45 @@ const Repairs = () => {
 
                   {/* Summary Grand Total Formula Breakdown & Submit to QC1 */}
                   <div className="pt-3 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                    <div className="bg-slate-900 text-white p-3.5 rounded-2xl space-y-1.5 font-mono shadow-inner border border-slate-800">
-                      <div className="flex items-center justify-between text-[11px] text-slate-400 font-bold uppercase tracking-wider space-x-4">
-                        <span className="flex items-center space-x-1">
-                          <Calculator className="w-3.5 h-3.5 text-cyan-400" />
-                          <span>Rincian Formula Total Biaya:</span>
-                        </span>
-                        <span className="text-slate-500 font-normal">Diag + Max(Kategori) + Spare Parts</span>
+                    {!isHidePrices ? (
+                      <div className="bg-slate-900 text-white p-3.5 rounded-2xl space-y-1.5 font-mono shadow-inner border border-slate-800">
+                        <div className="flex items-center justify-between text-[11px] text-slate-400 font-bold uppercase tracking-wider space-x-4">
+                          <span className="flex items-center space-x-1">
+                            <Calculator className="w-3.5 h-3.5 text-cyan-400" />
+                            <span>Rincian Formula Total Biaya:</span>
+                          </span>
+                          <span className="text-slate-500 font-normal">Diag + Max(Kategori) + Spare Parts</span>
+                        </div>
+                        <div className="text-xs text-slate-300 flex flex-wrap items-center gap-2 pt-1 border-t border-slate-800">
+                          <span>Diag: <strong className="text-white">Rp {diagnosticsFee.toLocaleString('id-ID')}</strong></span>
+                          <span>+</span>
+                          <span>Max Kat: <strong className="text-cyan-300">Rp {maxCategoryLaborFee.toLocaleString('id-ID')}</strong></span>
+                          <span>+</span>
+                          <span>Spare Part: <strong className="text-emerald-300">Rp {sparePartsTotal.toLocaleString('id-ID')}</strong></span>
+                          <span>=</span>
+                          <span className="text-base font-extrabold text-amber-400 bg-slate-800 px-2.5 py-0.5 rounded-lg border border-amber-400/30">
+                            Rp {grandTotal.toLocaleString('id-ID')}
+                          </span>
+                        </div>
                       </div>
-                      <div className="text-xs text-slate-300 flex flex-wrap items-center gap-2 pt-1 border-t border-slate-800">
-                        <span>Diag: <strong className="text-white">Rp {diagnosticsFee.toLocaleString('id-ID')}</strong></span>
-                        <span>+</span>
-                        <span>Max Kat: <strong className="text-cyan-300">Rp {maxCategoryLaborFee.toLocaleString('id-ID')}</strong></span>
-                        <span>+</span>
-                        <span>Spare Part: <strong className="text-emerald-300">Rp {sparePartsTotal.toLocaleString('id-ID')}</strong></span>
-                        <span>=</span>
-                        <span className="text-base font-extrabold text-amber-400 bg-slate-800 px-2.5 py-0.5 rounded-lg border border-amber-400/30">
-                          Rp {grandTotal.toLocaleString('id-ID')}
-                        </span>
+                    ) : (
+                      <div className="text-xs text-slate-500 italic flex items-center space-x-2">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                        <span>Pastikan hasil diagnostik, tindakan perbaikan, dan spare part telah terisi sebelum submit.</span>
                       </div>
-                    </div>
+                    )}
 
                     <button
-                      onClick={() => handleSubmitQC1(item.id)}
-                      className="px-5 py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white text-xs font-bold rounded-xl shadow-md shadow-orange-500/20 transition-all flex items-center space-x-2 self-end sm:self-auto"
+                      disabled={!isTimerRunning}
+                      onClick={() => {
+                        if (!isTimerRunning) {
+                          showToast('⚠️ Klik "Mulai Perbaikan" terlebih dahulu untuk menyelesikan perbaikan.');
+                          return;
+                        }
+                        handleSubmitQC1(item.id);
+                      }}
+                      className="px-5 py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white text-xs font-bold rounded-xl shadow-md shadow-orange-500/20 transition-all flex items-center space-x-2 self-end sm:self-auto disabled:opacity-40 disabled:cursor-not-allowed"
+                      title={!isTimerRunning ? "Klik 'Mulai Perbaikan' terlebih dahulu untuk menyelesikan perbaikan" : "Selesai Perbaikan & Submit ke QC1 Arisa"}
                     >
                       <Send className="w-4 h-4" />
                       <span>Selesai Perbaikan & Submit ke QC1 Arisa</span>

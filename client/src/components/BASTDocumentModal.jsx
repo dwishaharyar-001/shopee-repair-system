@@ -84,54 +84,49 @@ const BASTDocumentModal = ({ isOpen, onClose, orderId }) => {
     (u.role === 'QA_Liaison' && !u.qc_affiliation)
   );
 
-  const currentCoordinator = allUsers.find(u => String(u.id) === String(selectedCoordinatorId)) || data?.coordinator || (user?.role === 'Coordinator' ? user : null);
-  const currentQCShopee = allUsers.find(u => String(u.id) === String(selectedQCShopeeId)) || (qcShopeeUsers.length > 0 ? qcShopeeUsers[0] : null);
+  const currentCoordinator = coordinatorUsers.find(u => String(u.id) === String(selectedCoordinatorId));
+  const currentQCShopee = qcShopeeUsers.find(u => String(u.id) === String(selectedQCShopeeId));
 
   const coordinatorSignature = currentCoordinator?.signature_url || null;
   const qcShopeeSignature = currentQCShopee?.signature_url || null;
 
   // Calculate pricing summary
   const consumedParts = order?.consumedParts || [];
-
-  // Latest repair log notes & categories
-  const latestLog = order?.repairLogs && order.repairLogs.length > 0
-    ? [...order.repairLogs].sort((a, b) => b.id - a.id)[0]
-    : null;
-
   const currentDateStr = new Date().toLocaleDateString('id-ID', {
     day: 'numeric',
     month: 'long',
     year: 'numeric'
   });
 
+  const latestLog = order?.repairLogs && order.repairLogs.length > 0 ? order.repairLogs[0] : null;
+
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto print:p-0 print:bg-white print:static print:inset-auto">
-      <div className="bg-white w-full max-w-4xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden my-6 print:shadow-none print:border-none print:w-full print:max-w-none print:my-0">
+    <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto print:p-0 print:bg-white print:static">
+      <div className="bg-white w-full max-w-4xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden my-8 print:shadow-none print:border-none print:my-0 print:w-full">
         
-        {/* Top Control Header (Hidden when printing) */}
+        {/* Modal Top Action Bar (Hidden when printing) */}
         <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between print:hidden">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-xl bg-orange-600 flex items-center justify-center text-white font-bold shadow-md">
-              📄
+            <div className="p-2 bg-orange-500 rounded-xl text-white">
+              <FileText className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-bold text-base">Dokumen BAST Handover (Shopee ➔ Arisa Computer)</h3>
-              <p className="text-xs text-slate-400">Pilih PIC Coordinator Arisa & PIC QC Shopee untuk penandatanganan Berita Acara</p>
+              <h3 className="font-bold text-base">Pratinjau Dokumen BAST Handover</h3>
+              <p className="text-xs text-slate-400">Berita Acara Serah Terima Perangkat — Tiket ID: {order?.service_id || '-'}</p>
             </div>
           </div>
 
           <div className="flex items-center space-x-3">
             <button
               onClick={handlePrint}
-              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-md transition-all flex items-center space-x-1.5"
+              className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold rounded-xl shadow-md transition-all flex items-center space-x-2"
             >
               <Printer className="w-4 h-4" />
-              <span>Cetak / Download PDF BAST</span>
+              <span>Cetak / Save PDF BAST</span>
             </button>
-
             <button
               onClick={onClose}
-              className="p-1 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
+              className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
@@ -225,7 +220,7 @@ const BASTDocumentModal = ({ isOpen, onClose, orderId }) => {
                       <th className="py-2 px-3 border-r border-slate-200">Part Number</th>
                       <th className="py-2 px-3 border-r border-slate-200">Nama Spare Part / Komponen</th>
                       <th className="py-2 px-3 text-center border-r border-slate-200">Qty</th>
-                      <th className="py-2 px-3 text-right">Biaya (Rp)</th>
+                      {!isHidePrices && <th className="py-2 px-3 text-right">Biaya (Rp)</th>}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200">
@@ -236,14 +231,16 @@ const BASTDocumentModal = ({ isOpen, onClose, orderId }) => {
                           <td className="py-2 px-3 font-mono font-bold border-r border-slate-200">{item.part?.part_number}</td>
                           <td className="py-2 px-3 border-r border-slate-200">{item.part?.name}</td>
                           <td className="py-2 px-3 text-center font-mono border-r border-slate-200">{item.quantity}</td>
-                          <td className="py-2 px-3 text-right font-mono font-bold">
-                            Rp {parseFloat(item.total_cost).toLocaleString('id-ID')}
-                          </td>
+                          {!isHidePrices && (
+                            <td className="py-2 px-3 text-right font-mono font-bold">
+                              Rp {parseFloat(item.total_cost).toLocaleString('id-ID')}
+                            </td>
+                          )}
                         </tr>
                       ))
                     ) : (
                       <tr>
-                        <td colSpan="5" className="py-3 px-3 text-center text-slate-500 italic">
+                        <td colSpan={!isHidePrices ? "5" : "4"} className="py-3 px-3 text-center text-slate-500 italic">
                           Tidak ada penggantian spare part (Perbaikan software / jasad karsa).
                         </td>
                       </tr>
