@@ -356,9 +356,176 @@ const exportKPICSV = async (req, res) => {
   }
 };
 
+/**
+ * 5. BAST 1: Daily Intake Report (Shopee -> Arisa)
+ * Query params: date (YYYY-MM-DD), branch_id
+ */
+const getIntakeDailyBASTReport = async (req, res) => {
+  try {
+    const { date, branch_id } = req.query;
+    const targetDate = date || new Date().toISOString().slice(0, 10);
+
+    const startOfDay = new Date(`${targetDate}T00:00:00.000Z`);
+    const endOfDay = new Date(`${targetDate}T23:59:59.999Z`);
+
+    let whereClause = {
+      intake_date: { [Op.between]: [startOfDay, endOfDay] }
+    };
+    if (branch_id) {
+      whereClause.branch_id = branch_id;
+    }
+
+    const orders = await ServiceOrder.findAll({
+      where: whereClause,
+      include: [
+        { model: Device, as: 'device' },
+        { model: Customer, as: 'customer' },
+        { model: Branch, as: 'branch' }
+      ],
+      order: [['created_at', 'ASC']]
+    });
+
+    const items = orders.map((o, idx) => ({
+      no: idx + 1,
+      asset_id: o.device?.device_id || '-',
+      asset_tag: o.device?.asset_tag || o.device?.device_id || '-',
+      brand_model: o.device ? `${o.device.brand} ${o.device.model}` : '-',
+      initial_physical_condition: o.fault_description || 'Good Condition',
+      accessories: o.device?.accessories || 'Charger + Bag'
+    }));
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        date: targetDate,
+        total_units: items.length,
+        items
+      }
+    });
+  } catch (error) {
+    console.error('Error in getIntakeDailyBASTReport:', error);
+    return res.status(500).json({ success: false, message: 'Gagal mengambil data BAST Intake Harian.', error: error.message });
+  }
+};
+
+/**
+ * 6. BAST 2: Weekly Completed Return Report (Arisa -> Shopee)
+ * Query params: startDate (YYYY-MM-DD), endDate (YYYY-MM-DD), branch_id
+ */
+const getCompletedWeeklyBASTReport = async (req, res) => {
+  try {
+    const { startDate, endDate, branch_id } = req.query;
+
+    const start = startDate ? new Date(`${startDate}T00:00:00.000Z`) : new Date(Date.now() - 7 * 86400000);
+    const end = endDate ? new Date(`${endDate}T23:59:59.999Z`) : new Date();
+
+    let whereClause = {
+      status: DONE_STATUSES,
+      updated_at: { [Op.between]: [start, end] }
+    };
+    if (branch_id) {
+      whereClause.branch_id = branch_id;
+    }
+
+    const orders = await ServiceOrder.findAll({
+      where: whereClause,
+      include: [
+        { model: Device, as: 'device' },
+        { model: Customer, as: 'customer' },
+        { model: Branch, as: 'branch' }
+      ],
+      order: [['updated_at', 'DESC']]
+    });
+
+    const items = orders.map((o, idx) => ({
+      no: idx + 1,
+      asset_id: o.device?.device_id || '-',
+      service_id: o.service_id,
+      repair_type: 'Item Jasa + Part',
+      final_status: o.status === 'Released' ? 'Completed' : 'Repaired',
+      qc_result: 'Pass'
+    }));
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        startDate: start.toISOString().slice(0, 10),
+        endDate: end.toISOString().slice(0, 10),
+        total_units: items.length,
+        items
+      }
+    });
+  } catch (error) {
+    console.error('Error in getCompletedWeeklyBASTReport:', error);
+    return res.status(500).json({ success: false, message: 'Gagal mengambil data BAST Pengembalian Pekanan.', error: error.message });
+  }
+};
+
+/**
+ * 7. BAST 3: Weekly Used Spare Parts Report (Part Rusak)
+ * Query params: startDate (YYYY-MM-DD), endDate (YYYY-MM-DD), branch_id
+ */
+const getUsedSparePartsWeeklyBASTReport = async (req, res) => {
+  try {
+    const { startDate, endDate, branch_id } = req.query;
+    const { BrokenPart } = require('../models');
+
+    const start = startDate ? new Date(`${startDate}T00:00:00.000Z`) : new Date(Date.now() - 7 * 86400000);
+    const end = endDate ? new Date(`${endDate}T23:59:59.999Z`) : new Date();
+
+    let whereClause = {
+      created_at: { [Op.between]: [start, end] }
+    };
+
+    let includeOrder = {
+      model: ServiceOrder,
+      as: 'serviceOrder',
+      include: [{ model: Device, as: 'device' }]
+    };
+
+    if (branch_id) {
+      includeOrder.where = { branch_id };
+    }
+
+    const brokenParts = await BrokenPart.findAll({
+      where: whereClause,
+      include: [
+        includeOrder,
+        { model: Device, as: 'device' },
+        { model: User, as: 'reportedBy', attributes: ['id', 'full_name'] }
+      ],
+      order: [['created_at', 'DESC']]
+    });
+
+    const items = brokenParts.map((bp, idx) => ({
+      no: idx + 1,
+      asset_id: bp.device ? bp.device.device_id : (bp.serviceOrder?.device?.device_id || '-'),
+      spare_part_name: bp.category_name + (bp.serial_number ? ` (SN: ${bp.serial_number})` : ''),
+      quantity: 1,
+      condition: bp.damage_reason || 'Defective Part'
+    }));
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        startDate: start.toISOString().slice(0, 10),
+        endDate: end.toISOString().slice(0, 10),
+        total_parts: items.length,
+        items
+      }
+    });
+  } catch (error) {
+    console.error('Error in getUsedSparePartsWeeklyBASTReport:', error);
+    return res.status(500).json({ success: false, message: 'Gagal mengambil data BAST Used Spare Parts Pekanan.', error: error.message });
+  }
+};
+
 module.exports = {
   getTechnicianTaskReport,
   getDeviceTaskReport,
   getBASTDocument,
-  exportKPICSV
+  exportKPICSV,
+  getIntakeDailyBASTReport,
+  getCompletedWeeklyBASTReport,
+  getUsedSparePartsWeeklyBASTReport
 };
