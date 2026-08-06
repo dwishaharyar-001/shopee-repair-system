@@ -64,6 +64,9 @@ const startServer = async () => {
     
     await sequelize.sync();
     try {
+      await sequelize.query('ALTER TABLE repair_logs ADD COLUMN duration_seconds INTEGER DEFAULT 0;');
+    } catch (e) {}
+    try {
       await sequelize.query('ALTER TABLE repair_logs ADD COLUMN diagnostics_outcome TEXT;');
     } catch (e) {}
     try {

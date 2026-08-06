@@ -216,16 +216,23 @@ const stopTimer = async (req, res) => {
 
     if (activeLog.start_time) {
       const diffMs = endTime - new Date(activeLog.start_time);
-      const diffMins = Math.max(1, Math.round(diffMs / (1000 * 60)));
-      activeLog.duration_minutes = (activeLog.duration_minutes || 0) + diffMins;
+      const elapsedSecs = Math.max(0, Math.floor(diffMs / 1000));
+      const currentStoredSecs = activeLog.duration_seconds || ((activeLog.duration_minutes || 0) * 60);
+      const totalSecs = currentStoredSecs + elapsedSecs;
+
+      activeLog.duration_seconds = totalSecs;
+      activeLog.duration_minutes = Math.floor(totalSecs / 60);
     }
 
     activeLog.repair_status = 'Paused';
     await activeLog.save();
 
+    const displayMinutes = Math.floor((activeLog.duration_seconds || 0) / 60);
+    const displaySecs = (activeLog.duration_seconds || 0) % 60;
+
     return res.status(200).json({
       success: true,
-      message: `Timer perbaikan '${order.service_id}' dihentikan. Total durasi: ${activeLog.duration_minutes} menit.`,
+      message: `Timer perbaikan '${order.service_id}' dihentikan. Total durasi: ${displayMinutes}m ${displaySecs}s.`,
       data: activeLog
     });
   } catch (error) {

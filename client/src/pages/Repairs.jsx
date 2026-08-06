@@ -183,17 +183,21 @@ const Repairs = () => {
   };
 
   const getLiveDurationDisplay = (log) => {
-    if (!log) return '0 Min';
-    const baseMins = log.duration_minutes || 0;
+    if (!log) return '0m 0s';
+    
+    let totalSecs = log.duration_seconds !== undefined && log.duration_seconds !== null
+      ? log.duration_seconds
+      : ((log.duration_minutes || 0) * 60);
+
     if (log.repair_status === 'In Progress' && log.start_time) {
       const startMs = new Date(log.start_time).getTime();
       const elapsedMs = Math.max(0, nowTime - startMs);
-      const totalSecs = (baseMins * 60) + Math.floor(elapsedMs / 1000);
-      const m = Math.floor(totalSecs / 60);
-      const s = totalSecs % 60;
-      return `${m}m ${s}s`;
+      totalSecs += Math.floor(elapsedMs / 1000);
     }
-    return `${baseMins} Min`;
+
+    const m = Math.floor(totalSecs / 60);
+    const s = totalSecs % 60;
+    return `${m}m ${s}s`;
   };
 
   const showToast = (msg) => {
