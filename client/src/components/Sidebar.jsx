@@ -78,6 +78,56 @@ const Sidebar = () => {
             </NavLink>
           );
         })}
+
+        {/* SUB-MENU SECTION: DOKUMEN BAST HANDOVER */}
+        <div className="pt-4 px-3 pb-2 text-[11px] font-semibold text-orange-400 uppercase tracking-wider flex items-center justify-between border-t border-slate-800/60 mt-4">
+          <span>Dokumen BAST Handover</span>
+        </div>
+
+        <NavLink
+          to="/bast-documents?type=1"
+          className={({ isActive }) => {
+            const isSubActive = window.location.pathname === '/bast-documents' && new URLSearchParams(window.location.search).get('type') === '1';
+            return `flex items-center space-x-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+              isSubActive
+                ? 'bg-orange-500/20 text-orange-300 font-bold border border-orange-500/40'
+                : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/50'
+            }`;
+          }}
+        >
+          <FileText className="w-4 h-4 text-orange-400 flex-shrink-0" />
+          <span>📋 BAST Shopee ➔ Arisa</span>
+        </NavLink>
+
+        <NavLink
+          to="/bast-documents?type=2"
+          className={({ isActive }) => {
+            const isSubActive = window.location.pathname === '/bast-documents' && new URLSearchParams(window.location.search).get('type') === '2';
+            return `flex items-center space-x-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+              isSubActive
+                ? 'bg-cyan-500/20 text-cyan-300 font-bold border border-cyan-500/40'
+                : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/50'
+            }`;
+          }}
+        >
+          <FileText className="w-4 h-4 text-cyan-400 flex-shrink-0" />
+          <span>🔄 BAST Arisa ➔ Shopee</span>
+        </NavLink>
+
+        <NavLink
+          to="/bast-documents?type=3"
+          className={({ isActive }) => {
+            const isSubActive = window.location.pathname === '/bast-documents' && new URLSearchParams(window.location.search).get('type') === '3';
+            return `flex items-center space-x-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+              isSubActive
+                ? 'bg-rose-500/20 text-rose-300 font-bold border border-rose-500/40'
+                : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/50'
+            }`;
+          }}
+        >
+          <FileText className="w-4 h-4 text-rose-400 flex-shrink-0" />
+          <span>🛠️ BAST Used Spare Parts</span>
+        </NavLink>
       </div>
 
       {/* Footer / System Status */}
