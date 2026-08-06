@@ -25,7 +25,8 @@ import {
 } from 'lucide-react';
 
 const Admin = () => {
-  const { refreshPermissions } = useAuth();
+  const { user: currentUser, refreshPermissions } = useAuth();
+  const isAdminUser = currentUser?.role === 'Admin';
   const [activeTab, setActiveTab] = useState('menu_permissions');
 
   // Matrix State
@@ -354,6 +355,54 @@ const Admin = () => {
       }
     } catch (err) {
       showNotification('error', err.response?.data?.message || 'Gagal mengubah status pengguna.');
+    }
+  };
+
+  const handleRequestDeleteUser = async (u) => {
+    if (u.role === 'Admin') {
+      showNotification('error', 'Akun Admin dilindungi dan tidak dapat dihapus.');
+      return;
+    }
+    if (!window.confirm(`Apakah Anda yakin ingin mengajukan penghapusan user '${u.full_name}' (@${u.username})? Status akan menjadi Pending Delete.`)) {
+      return;
+    }
+
+    try {
+      const res = await api.delete(`/menu/users/${u.id}/request-delete`);
+      if (res.data && res.data.success) {
+        showNotification('success', res.data.message);
+        fetchUsers();
+      }
+    } catch (err) {
+      showNotification('error', err.response?.data?.message || 'Gagal mengajukan hapus user.');
+    }
+  };
+
+  const handleApproveDeleteUser = async (u) => {
+    if (!window.confirm(`SETUJUI HAPUS USER: Akun '${u.full_name}' (@${u.username}) akan dihapus PERMANEN dari sistem. Lanjutkan?`)) {
+      return;
+    }
+
+    try {
+      const res = await api.post(`/menu/users/${u.id}/approve-delete`);
+      if (res.data && res.data.success) {
+        showNotification('success', res.data.message);
+        fetchUsers();
+      }
+    } catch (err) {
+      showNotification('error', err.response?.data?.message || 'Gagal menyetujui penghapusan user.');
+    }
+  };
+
+  const handleRejectDeleteUser = async (u) => {
+    try {
+      const res = await api.post(`/menu/users/${u.id}/reject-delete`);
+      if (res.data && res.data.success) {
+        showNotification('success', res.data.message);
+        fetchUsers();
+      }
+    } catch (err) {
+      showNotification('error', err.response?.data?.message || 'Gagal menolak pengajuan hapus user.');
     }
   };
 
@@ -808,6 +857,11 @@ const Admin = () => {
                               <Shield className="w-4 h-4 text-purple-600" />
                               <span>Aktif (Hak Penuh Admin)</span>
                             </span>
+                          ) : u.delete_status === 'pending_delete' ? (
+                            <span className="inline-flex items-center space-x-1.5 text-xs text-amber-800 font-extrabold bg-amber-100 px-2.5 py-1 rounded-md border border-amber-300 animate-pulse">
+                              <AlertCircle className="w-4 h-4 text-amber-600" />
+                              <span>⚠️ Pending Delete (Menunggu Approval)</span>
+                            </span>
                           ) : u.is_active ? (
                             <span className="inline-flex items-center space-x-1.5 text-xs text-emerald-600 font-medium">
                               <UserCheck className="w-4 h-4" />
@@ -844,6 +898,41 @@ const Admin = () => {
                                 {u.is_active ? <UserX className="w-3.5 h-3.5 text-rose-600" /> : <UserCheck className="w-3.5 h-3.5 text-emerald-600" />}
                                 <span>{u.is_active ? 'Non-aktifkan' : 'Aktifkan'}</span>
                               </button>
+                            )}
+
+                            {/* Tombol Hapus User / Request Delete (Coordinator & Admin) */}
+                            {!isAdmin && u.delete_status !== 'pending_delete' && (
+                              <button
+                                onClick={() => handleRequestDeleteUser(u)}
+                                className="px-2.5 py-1.5 bg-red-100 hover:bg-red-200 text-red-700 border border-red-300 rounded-lg text-xs font-bold transition-all inline-flex items-center space-x-1"
+                                title="Hapus User (Pengajuan Pending Delete oleh Coordinator)"
+                              >
+                                <Trash2 className="w-3.5 h-3.5 text-red-600" />
+                                <span>Hapus User</span>
+                              </button>
+                            )}
+
+                            {/* Approval Hapus khusus System Administrator (Admin) */}
+                            {isAdminUser && u.delete_status === 'pending_delete' && (
+                              <div className="flex items-center space-x-1.5">
+                                <button
+                                  onClick={() => handleApproveDeleteUser(u)}
+                                  className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-all shadow-xs inline-flex items-center space-x-1"
+                                  title="Setujui Hapus User Permanen"
+                                >
+                                  <UserCheck className="w-3.5 h-3.5" />
+                                  <span>Approve Hapus</span>
+                                </button>
+
+                                <button
+                                  onClick={() => handleRejectDeleteUser(u)}
+                                  className="px-2.5 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded-lg text-xs font-bold transition-all inline-flex items-center space-x-1"
+                                  title="Tolak Pengajuan Hapus"
+                                >
+                                  <X className="w-3.5 h-3.5 text-rose-600" />
+                                  <span>Tolak</span>
+                                </button>
+                              </div>
                             )}
                           </div>
                         </td>

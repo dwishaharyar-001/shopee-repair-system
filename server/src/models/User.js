@@ -43,6 +43,20 @@ const User = sequelize.define('User', {
   is_active: {
     type: DataTypes.BOOLEAN,
     defaultValue: true
+  },
+  delete_status: {
+    type: DataTypes.STRING(20),
+    allowNull: false,
+    defaultValue: 'none' // 'none', 'pending_delete'
+  },
+  signature_url: {
+    type: DataTypes.TEXT,
+    allowNull: true
+  },
+  qc_affiliation: {
+    type: DataTypes.STRING(20),
+    allowNull: false,
+    defaultValue: 'Arisa' // 'Shopee' or 'Arisa'
   }
 }, {
   tableName: 'users',

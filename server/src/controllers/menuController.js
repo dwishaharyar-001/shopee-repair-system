@@ -1,46 +1,67 @@
 const bcrypt = require('bcryptjs');
-const { RoleMenuAccess, User, Branch, Technician } = require('../models');
+const { User, RoleMenuAccess, Branch, Technician } = require('../models');
 
-const ALL_ROLES = ['Admin', 'Coordinator', 'QA_Liaison', 'Technician'];
-const DEFAULT_MENUS = [
-  { key: 'dashboard', label: 'Dashboard' },
-  { key: 'devices', label: 'Devices Intake' },
-  { key: 'repairs', label: 'Repair Queue' },
-  { key: 'qc', label: 'QC Checkpoints' },
-  { key: 'parts', label: 'Parts Inventory' },
-  { key: 'reports', label: 'KPI Reports' },
-  { key: 'admin', label: 'Admin & Users' }
+// Default initial permissions matrix for seed/fallback
+const DEFAULT_PERMISSIONS = [
+  // Dashboard
+  { role: 'Admin', menu_key: 'dashboard', is_allowed: true },
+  { role: 'Coordinator', menu_key: 'dashboard', is_allowed: true },
+  { role: 'QA_Liaison', menu_key: 'dashboard', is_allowed: true },
+  { role: 'Technician', menu_key: 'dashboard', is_allowed: true },
+
+  // Devices Intake
+  { role: 'Admin', menu_key: 'devices', is_allowed: true },
+  { role: 'Coordinator', menu_key: 'devices', is_allowed: true },
+  { role: 'QA_Liaison', menu_key: 'devices', is_allowed: true },
+  { role: 'Technician', menu_key: 'devices', is_allowed: true },
+
+  // Repair Queue
+  { role: 'Admin', menu_key: 'repairs', is_allowed: true },
+  { role: 'Coordinator', menu_key: 'repairs', is_allowed: true },
+  { role: 'QA_Liaison', menu_key: 'repairs', is_allowed: false },
+  { role: 'Technician', menu_key: 'repairs', is_allowed: true },
+
+  // QC Checkpoints
+  { role: 'Admin', menu_key: 'qc', is_allowed: true },
+  { role: 'Coordinator', menu_key: 'qc', is_allowed: true },
+  { role: 'QA_Liaison', menu_key: 'qc', is_allowed: true },
+  { role: 'Technician', menu_key: 'qc', is_allowed: true },
+
+  // Parts Inventory
+  { role: 'Admin', menu_key: 'parts', is_allowed: true },
+  { role: 'Coordinator', menu_key: 'parts', is_allowed: true },
+  { role: 'QA_Liaison', menu_key: 'parts', is_allowed: false },
+  { role: 'Technician', menu_key: 'parts', is_allowed: true },
+
+  // KPI Reports
+  { role: 'Admin', menu_key: 'reports', is_allowed: true },
+  { role: 'Coordinator', menu_key: 'reports', is_allowed: true },
+  { role: 'QA_Liaison', menu_key: 'reports', is_allowed: true },
+  { role: 'Technician', menu_key: 'reports', is_allowed: false },
+
+  // Admin & Users
+  { role: 'Admin', menu_key: 'admin', is_allowed: true },
+  { role: 'Coordinator', menu_key: 'admin', is_allowed: true },
+  { role: 'QA_Liaison', menu_key: 'admin', is_allowed: false },
+  { role: 'Technician', menu_key: 'admin', is_allowed: false },
 ];
 
-// Initial default access matrix
-const DEFAULT_ACCESS_MATRIX = {
-  Admin: ['dashboard', 'devices', 'repairs', 'qc', 'parts', 'reports', 'admin'],
-  Coordinator: ['dashboard', 'devices', 'repairs', 'qc', 'parts', 'reports', 'admin'],
-  QA_Liaison: ['dashboard', 'devices', 'qc', 'reports'],
-  Technician: ['dashboard', 'devices', 'repairs', 'qc', 'parts']
-};
-
 /**
-  Helper to seed default menu permission records if empty or missing
+ * Ensure default permissions exist in DB
  */
 const ensureDefaultPermissions = async () => {
   try {
     const count = await RoleMenuAccess.count();
     if (count === 0) {
-      const recordsToCreate = [];
-      for (const role of ALL_ROLES) {
-        const allowedKeys = DEFAULT_ACCESS_MATRIX[role] || [];
-        for (const menu of DEFAULT_MENUS) {
-          recordsToCreate.push({
-            role,
-            menu_key: menu.key,
-            menu_label: menu.label,
-            is_allowed: allowedKeys.includes(menu.key)
-          });
-        }
+      console.log('Seeding default role menu permissions...');
+      for (const item of DEFAULT_PERMISSIONS) {
+        await RoleMenuAccess.create({
+          role: item.role,
+          menu_key: item.menu_key,
+          menu_label: item.menu_key.toUpperCase(),
+          is_allowed: item.is_allowed
+        });
       }
-      await RoleMenuAccess.bulkCreate(recordsToCreate);
-      console.log('✅ Seeded default role menu access permissions.');
     }
   } catch (err) {
     console.error('Error ensuring default permissions:', err);
@@ -48,94 +69,102 @@ const ensureDefaultPermissions = async () => {
 };
 
 /**
- * Get all role menu access permissions (Matrix structure for Admin)
+ * Get current user allowed menus
+ */
+const getMyPermissions = async (req, res) => {
+  try {
+    const userRole = req.user.role;
+
+    // Admin has access to all menus
+    if (userRole === 'Admin') {
+      const allMenus = ['dashboard', 'devices', 'repairs', 'qc', 'parts', 'reports', 'admin'];
+      return res.status(200).json({
+        success: true,
+        data: allMenus
+      });
+    }
+
+    await ensureDefaultPermissions();
+
+    const permissions = await RoleMenuAccess.findAll({
+      where: { role: userRole, is_allowed: true }
+    });
+
+    const allowedMenus = permissions.map(p => p.menu_key);
+
+    res.status(200).json({
+      success: true,
+      data: allowedMenus
+    });
+  } catch (error) {
+    console.error('Error in getMyPermissions:', error);
+    res.status(500).json({ success: false, message: 'Gagal mengambil hak akses menu.' });
+  }
+};
+
+/**
+ * Get full matrix of role menu permissions (For Admin Matrix page)
  */
 const getAllPermissions = async (req, res) => {
   try {
     await ensureDefaultPermissions();
+
     const permissions = await RoleMenuAccess.findAll({
-      order: [['role', 'ASC'], ['id', 'ASC']]
+      order: [['role', 'ASC'], ['menu_key', 'ASC']]
     });
+
+    const roles = ['Admin', 'Coordinator', 'QA_Liaison', 'Technician'];
+    const menus = [
+      { key: 'dashboard', label: 'Dashboard' },
+      { key: 'devices', label: 'Devices Intake' },
+      { key: 'repairs', label: 'Repair Queue' },
+      { key: 'qc', label: 'QC Checkpoints' },
+      { key: 'parts', label: 'Parts Inventory' },
+      { key: 'reports', label: 'KPI Reports & BAST' },
+      { key: 'admin', label: 'Admin & Users' }
+    ];
 
     res.status(200).json({
       success: true,
       data: {
-        roles: ALL_ROLES,
-        menus: DEFAULT_MENUS,
+        roles,
+        menus,
         permissions
       }
     });
   } catch (error) {
     console.error('Error in getAllPermissions:', error);
-    res.status(500).json({ success: false, message: 'Gagal mengambil data hak akses menu.' });
+    res.status(500).json({ success: false, message: 'Gagal mengambil matriks hak akses.' });
   }
 };
 
 /**
- * Get allowed menu keys for the current authenticated user's role
- */
-const getMyPermissions = async (req, res) => {
-  try {
-    await ensureDefaultPermissions();
-    const userRole = req.user.role;
-
-    // Admin Application ALWAYS gets 100% full rights to all menus
-    if (userRole === 'Admin') {
-      return res.status(200).json({
-        success: true,
-        data: {
-          role: userRole,
-          allowedMenus: DEFAULT_MENUS.map(m => m.key)
-        }
-      });
-    }
-
-    const accessRecords = await RoleMenuAccess.findAll({
-      where: {
-        role: userRole,
-        is_allowed: true
-      }
-    });
-
-    const allowedMenus = accessRecords.map(rec => rec.menu_key);
-
-    res.status(200).json({
-      success: true,
-      data: {
-        role: userRole,
-        allowedMenus
-      }
-    });
-  } catch (error) {
-    console.error('Error in getMyPermissions:', error);
-    res.status(500).json({ success: false, message: 'Gagal mengambil hak akses menu pengguna.' });
-  }
-};
-
-/**
- * Update role menu access permissions (Admin only)
+ * Update role menu permissions matrix (Admin only)
  */
 const updatePermissions = async (req, res) => {
   try {
     const { permissions } = req.body; // Array of { role, menu_key, is_allowed }
 
     if (!Array.isArray(permissions)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Format payload tidak valid. Harap kirimkan array permissions.'
-      });
+      return res.status(400).json({ success: false, message: 'Format data permissions tidak valid.' });
     }
 
     for (const item of permissions) {
       const { role, menu_key, is_allowed } = item;
-      if (role && menu_key && typeof is_allowed === 'boolean') {
-        const menuObj = DEFAULT_MENUS.find(m => m.key === menu_key);
-        const menuLabel = menuObj ? menuObj.label : menu_key;
 
-        // Admin role ALWAYS remains enabled for all menus
-        const finalIsAllowed = role === 'Admin' ? true : is_allowed;
+      // Admin role always has full access
+      const finalIsAllowed = role === 'Admin' ? true : Boolean(is_allowed);
 
-        await RoleMenuAccess.upsert({
+      const existing = await RoleMenuAccess.findOne({
+        where: { role, menu_key }
+      });
+
+      if (existing) {
+        existing.is_allowed = finalIsAllowed;
+        await existing.save();
+      } else {
+        const menuLabel = menu_key.toUpperCase();
+        await RoleMenuAccess.create({
           role,
           menu_key,
           menu_label: menuLabel,
@@ -155,7 +184,7 @@ const updatePermissions = async (req, res) => {
 };
 
 /**
- * Get list of all users (for Admin User Management tab)
+ * Get list of all users
  */
 const getAllUsers = async (req, res) => {
   try {
@@ -179,7 +208,7 @@ const getAllUsers = async (req, res) => {
 };
 
 /**
- * Create New User (Admin only)
+ * Create New User (Admin & Coordinator)
  */
 const createUser = async (req, res) => {
   try {
@@ -211,7 +240,8 @@ const createUser = async (req, res) => {
       email: email ? email.trim() : null,
       role,
       branch_id: targetBranchId,
-      is_active: true
+      is_active: true,
+      delete_status: 'none'
     });
 
     // Auto create Technician profile if role is Technician
@@ -246,7 +276,7 @@ const createUser = async (req, res) => {
 };
 
 /**
- * Update Existing User (Admin only)
+ * Update Existing User (Admin & Coordinator)
  */
 const updateUser = async (req, res) => {
   try {
@@ -258,7 +288,7 @@ const updateUser = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Pengguna tidak ditemukan.' });
     }
 
-    // Protection for Admin role / master admin account
+    // Protection for Admin role
     if (user.role === 'Admin' && is_active === false) {
       return res.status(400).json({
         success: false,
@@ -270,7 +300,6 @@ const updateUser = async (req, res) => {
     if (email !== undefined) user.email = email ? email.trim() : null;
     if (role) user.role = role;
 
-    // Admin role ALWAYS gets global branch access (branch_id = null)
     if (user.role === 'Admin') {
       user.branch_id = null;
     } else if (branch_id !== undefined) {
@@ -287,7 +316,6 @@ const updateUser = async (req, res) => {
 
     await user.save();
 
-    // If role is Technician, ensure Technician profile exists
     if (user.role === 'Technician') {
       let techProfile = await Technician.findOne({ where: { user_id: user.id } });
       if (!techProfile) {
@@ -325,7 +353,7 @@ const updateUser = async (req, res) => {
 };
 
 /**
- * Toggle Active Status / Delete User (Admin only)
+ * Toggle Active Status User
  */
 const deleteUser = async (req, res) => {
   try {
@@ -339,7 +367,7 @@ const deleteUser = async (req, res) => {
     if (user.role === 'Admin') {
       return res.status(403).json({
         success: false,
-        message: 'Akun Admin Aplikasi dilindungi dan tidak dapat dihapus atau dinonaktifkan.'
+        message: 'Akun Admin Aplikasi dilindungi dan tidak dapat dinonaktifkan.'
       });
     }
 
@@ -358,7 +386,109 @@ const deleteUser = async (req, res) => {
 };
 
 /**
- * Assign / Update User Branch Location (Admin only)
+ * Request Delete User (Coordinator or Admin) -> sets delete_status = 'pending_delete'
+ */
+const requestDeleteUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await User.findByPk(id);
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Pengguna tidak ditemukan.' });
+    }
+
+    if (user.role === 'Admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Akun Admin Aplikasi dilindungi dan tidak dapat dihapus.'
+      });
+    }
+
+    user.delete_status = 'pending_delete';
+    await user.save();
+
+    return res.status(200).json({
+      success: true,
+      message: `Pengajuan hapus user '${user.full_name}' (@${user.username}) berhasil. Status berubah menjadi 'pending delete' menunggu persetujuan System Administrator.`,
+      data: user
+    });
+  } catch (error) {
+    console.error('Error in requestDeleteUser:', error);
+    return res.status(500).json({ success: false, message: 'Gagal mengajukan hapus user.' });
+  }
+};
+
+/**
+ * Approve Delete User (System Administrator / Admin ONLY) -> permanently destroys user
+ */
+const approveDeleteUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await User.findByPk(id);
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Pengguna tidak ditemukan.' });
+    }
+
+    if (req.user.role !== 'Admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Hanya System Administrator yang berhak menyetujui penghapusan pengguna.'
+      });
+    }
+
+    const userName = user.full_name;
+    const username = user.username;
+    
+    // Destroy associated Technician profile if exists
+    await Technician.destroy({ where: { user_id: user.id } });
+    await user.destroy();
+
+    return res.status(200).json({
+      success: true,
+      message: `Pengajuan hapus disetujui. Akun user '${userName}' (@${username}) telah dihapus secara permanen dari sistem.`
+    });
+  } catch (error) {
+    console.error('Error in approveDeleteUser:', error);
+    return res.status(500).json({ success: false, message: 'Gagal menyetujui hapus user.' });
+  }
+};
+
+/**
+ * Reject Delete User (System Administrator / Admin ONLY) -> resets delete_status = 'none'
+ */
+const rejectDeleteUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await User.findByPk(id);
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Pengguna tidak ditemukan.' });
+    }
+
+    if (req.user.role !== 'Admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Hanya System Administrator yang berhak menolak pengajuan hapus.'
+      });
+    }
+
+    user.delete_status = 'none';
+    await user.save();
+
+    return res.status(200).json({
+      success: true,
+      message: `Pengajuan hapus user '${user.full_name}' ditolak. Status user dikembalikan ke normal.`,
+      data: user
+    });
+  } catch (error) {
+    console.error('Error in rejectDeleteUser:', error);
+    return res.status(500).json({ success: false, message: 'Gagal menolak pengajuan hapus user.' });
+  }
+};
+
+/**
+ * Assign / Update User Branch Location
  */
 const updateUserBranch = async (req, res) => {
   try {
@@ -408,6 +538,9 @@ module.exports = {
   createUser,
   updateUser,
   deleteUser,
+  requestDeleteUser,
+  approveDeleteUser,
+  rejectDeleteUser,
   updateUserBranch,
   ensureDefaultPermissions
 };

@@ -69,13 +69,16 @@ const startServer = async () => {
     try {
       await sequelize.query('ALTER TABLE repair_logs ADD COLUMN repair_categories TEXT;');
     } catch (e) {}
+    try {
+      await sequelize.query('ALTER TABLE users ADD COLUMN signature_url TEXT;');
+    } catch (e) {}
     console.log('✅ Skema tabel Sequelize berhasil di-sync.');
 
     await ensureDefaultBranches();
     await ensureDefaultPermissions();
 
-    app.listen(PORT, () => {
-      console.log(`🚀 Server Shopee Repair API berjalan di http://localhost:3000`);
+    app.listen(PORT, '127.0.0.1', () => {
+      console.log(`🚀 Server Shopee Repair API berjalan di http://127.0.0.1:${PORT}`);
     });
   } catch (error) {
     console.error('❌ Gagal menyalakan server:', error.message);

@@ -9,6 +9,9 @@ const {
   createUser,
   updateUser,
   deleteUser,
+  requestDeleteUser,
+  approveDeleteUser,
+  rejectDeleteUser,
   updateUserBranch
 } = require('../controllers/menuController');
 
@@ -27,10 +30,15 @@ router.put('/permissions', requireRole('Admin'), updatePermissions);
 // Get list of users (Admin & Coordinator)
 router.get('/users', requireRole('Admin', 'Coordinator'), getAllUsers);
 
-// Admin User CRUD Operations
-router.post('/users', requireRole('Admin'), createUser);
-router.put('/users/:id', requireRole('Admin'), updateUser);
-router.delete('/users/:id', requireRole('Admin'), deleteUser);
-router.put('/users/:id/branch', requireRole('Admin'), updateUserBranch);
+// Admin & Coordinator User Operations
+router.post('/users', requireRole('Admin', 'Coordinator'), createUser);
+router.put('/users/:id', requireRole('Admin', 'Coordinator'), updateUser);
+router.delete('/users/:id', requireRole('Admin', 'Coordinator'), deleteUser);
+router.put('/users/:id/branch', requireRole('Admin', 'Coordinator'), updateUserBranch);
+
+// Delete Workflow: Coordinator requests delete -> Admin approves/rejects
+router.delete('/users/:id/request-delete', requireRole('Coordinator', 'Admin'), requestDeleteUser);
+router.post('/users/:id/approve-delete', requireRole('Admin'), approveDeleteUser);
+router.post('/users/:id/reject-delete', requireRole('Admin'), rejectDeleteUser);
 
 module.exports = router;

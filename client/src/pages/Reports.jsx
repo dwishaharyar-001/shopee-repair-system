@@ -16,13 +16,20 @@ import {
   ShieldAlert, 
   Filter,
   CheckCircle,
-  Hourglass
+  Hourglass,
+  FileText,
+  Printer
 } from 'lucide-react';
+import BASTDocumentModal from '../components/BASTDocumentModal';
 
 const Reports = () => {
   const [activeTab, setActiveTab] = useState('technicians'); // 'technicians' | 'devices'
   const [branches, setBranches] = useState([]);
   const [selectedBranch, setSelectedBranch] = useState('');
+
+  // BAST Modal State
+  const [selectedBASTOrderId, setSelectedBASTOrderId] = useState(null);
+  const [isBASTModalOpen, setIsBASTModalOpen] = useState(false);
 
   // 1. Technician Report State
   const [techReport, setTechReport] = useState({
@@ -175,9 +182,9 @@ const Reports = () => {
             <BarChart3 className="w-7 h-7" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Laporan KPI & Status Pengerjaan Device</h1>
+            <h1 className="text-2xl font-bold tracking-tight">Laporan KPI & Dokumen BAST</h1>
             <p className="text-slate-400 text-sm mt-0.5">
-              Monitoring beban kerja teknisi dan rekapitulasi perbaikan perangkat yang sudah & belum dikerjakan.
+              Monitoring beban kerja teknisi, rekapitulasi perangkat, dan cetak Dokumen Berita Acara Serah Terima (BAST).
             </p>
           </div>
         </div>
@@ -228,7 +235,7 @@ const Reports = () => {
           }`}
         >
           <Laptop className="w-4 h-4" />
-          <span>Rekap Perangkat Done vs Belum Dikerjakan ({deviceReport.summary.totalDevices})</span>
+          <span>Rekap Perangkat & Dokumen BAST ({deviceReport.summary.totalDevices})</span>
         </button>
       </div>
 
@@ -488,9 +495,9 @@ const Reports = () => {
                       <th className="py-3.5 px-4">Cabang</th>
                       <th className="py-3.5 px-4">Perangkat & Brand</th>
                       <th className="py-3.5 px-4">Customer</th>
-                      <th className="py-3.5 px-4">Teknisi Penanggung Jawab</th>
+                      <th className="py-3.5 px-4">Teknisi PJ</th>
                       <th className="py-3.5 px-4">Status Pengerjaan</th>
-                      <th className="py-3.5 px-4">Terakhir Diperbarui</th>
+                      <th className="py-3.5 px-4 text-center">Dokumen BAST</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -522,14 +529,17 @@ const Reports = () => {
                         <td className="py-3.5 px-4">
                           {getDeviceStatusBadge(item.status, item.is_done)}
                         </td>
-                        <td className="py-3.5 px-4 text-slate-500 font-mono text-[11px]">
-                          {new Date(item.updated_at).toLocaleString('id-ID', {
-                            day: '2-digit',
-                            month: 'short',
-                            year: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })}
+                        <td className="py-3.5 px-4 text-center">
+                          <button
+                            onClick={() => {
+                              setSelectedBASTOrderId(item.id);
+                              setIsBASTModalOpen(true);
+                            }}
+                            className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-[11px] font-bold transition-all shadow-sm flex items-center space-x-1.5 mx-auto"
+                          >
+                            <Printer className="w-3.5 h-3.5 text-orange-400" />
+                            <span>Dokumen BAST</span>
+                          </button>
                         </td>
                       </tr>
                     ))}
@@ -540,6 +550,16 @@ const Reports = () => {
           </div>
         </div>
       )}
+
+      {/* BAST Modal Component */}
+      <BASTDocumentModal
+        isOpen={isBASTModalOpen}
+        onClose={() => {
+          setIsBASTModalOpen(false);
+          setSelectedBASTOrderId(null);
+        }}
+        orderId={selectedBASTOrderId}
+      />
     </div>
   );
 };

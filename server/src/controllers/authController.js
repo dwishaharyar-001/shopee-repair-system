@@ -68,7 +68,8 @@ const login = async (req, res) => {
           role: user.role,
           branch_id: user.branch_id,
           branch: user.branch || null,
-          technician: user.technicianProfile || null
+          technician: user.technicianProfile || null,
+          signature_url: user.signature_url || null
         }
       }
     });
@@ -129,8 +130,50 @@ const getAllUsers = async (req, res) => {
   }
 };
 
+const uploadSignature = async (req, res) => {
+  try {
+    const user = await User.findByPk(req.user.id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User tidak ditemukan.' });
+    }
+
+    if (user.role !== 'Coordinator' && user.role !== 'Admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Akses ditolak. Fitur upload tanda tangan khusus untuk role Coordinator.'
+      });
+    }
+
+    const { signature_url } = req.body;
+    user.signature_url = signature_url || null;
+    await user.save();
+
+    const updatedUser = await User.findByPk(user.id, {
+      attributes: { exclude: ['password_hash'] },
+      include: [
+        { model: Technician, as: 'technicianProfile', required: false },
+        { model: Branch, as: 'branch', required: false }
+      ]
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: signature_url ? 'Tanda tangan Coordinator berhasil disimpan!' : 'Tanda tangan berhasil dihapus.',
+      data: updatedUser
+    });
+  } catch (error) {
+    console.error('Error uploading signature:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Gagal menyimpan tanda tangan Coordinator.',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   login,
   getMe,
-  getAllUsers
+  getAllUsers,
+  uploadSignature
 };

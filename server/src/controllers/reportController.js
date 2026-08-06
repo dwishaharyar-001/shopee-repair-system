@@ -194,7 +194,81 @@ const getDeviceTaskReport = async (req, res) => {
   }
 };
 
+/**
+ * 3. BAST Document Detail Endpoint
+ * Fetches full details for a Service Order to generate BAST Handover document with Coordinator signature
+ */
+const getBASTDocument = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const { PartConsumed, Part, RepairLog } = require('../models');
+
+    const order = await ServiceOrder.findByPk(id, {
+      include: [
+        { model: Device, as: 'device' },
+        { model: Customer, as: 'customer' },
+        { model: Branch, as: 'branch' },
+        {
+          model: Technician,
+          as: 'assignedTechnician',
+          include: [{ model: User, as: 'user', attributes: ['id', 'full_name', 'email', 'role'] }]
+        },
+        { model: User, as: 'receivedBy', attributes: ['id', 'full_name', 'email', 'role', 'signature_url'] },
+        {
+          model: PartConsumed,
+          as: 'consumedParts',
+          include: [{ model: Part, as: 'part' }]
+        },
+        {
+          model: RepairLog,
+          as: 'repairLogs'
+        }
+      ]
+    });
+
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Service Order tidak ditemukan.' });
+    }
+
+    // Find branch coordinator or logged in coordinator signature
+    let coordinatorUser = null;
+    if (order.receivedBy && (order.receivedBy.role === 'Coordinator' || order.receivedBy.role === 'Admin')) {
+      coordinatorUser = order.receivedBy;
+    } else {
+      // Find any active coordinator in the same branch or global
+      let coordWhere = { role: 'Coordinator', is_active: true };
+      if (order.branch_id) {
+        coordWhere[Op.or] = [{ branch_id: order.branch_id }, { branch_id: null }];
+      }
+      coordinatorUser = await User.findOne({
+        where: coordWhere,
+        attributes: ['id', 'full_name', 'email', 'role', 'signature_url']
+      });
+    }
+
+    // Fallback if no specific coordinator user found, use logged-in user if Coordinator/Admin
+    if (!coordinatorUser && (req.user.role === 'Coordinator' || req.user.role === 'Admin')) {
+      coordinatorUser = await User.findByPk(req.user.id, {
+        attributes: ['id', 'full_name', 'email', 'role', 'signature_url']
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        order,
+        coordinator: coordinatorUser
+      }
+    });
+  } catch (error) {
+    console.error('Error in getBASTDocument:', error);
+    return res.status(500).json({ success: false, message: 'Gagal mengambil dokumen BAST.', error: error.message });
+  }
+};
+
 module.exports = {
   getTechnicianTaskReport,
-  getDeviceTaskReport
+  getDeviceTaskReport,
+  getBASTDocument
 };
