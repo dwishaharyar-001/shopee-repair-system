@@ -19,7 +19,15 @@ const getWorkQueue = async (req, res) => {
       whereClause.status = { [Op.in]: ['Intake', 'In Repair', 'Rework', 'QC1 Pending'] };
     }
 
-    if (technician_id) {
+    // Role-based strict isolation for Technicians
+    if (req.user && req.user.role === 'Technician') {
+      const tech = await Technician.findOne({ where: { user_id: req.user.id } });
+      if (tech) {
+        whereClause.assigned_technician_id = tech.id;
+      } else {
+        whereClause.assigned_technician_id = -1; // Return empty if technician profile missing
+      }
+    } else if (technician_id) {
       whereClause.assigned_technician_id = technician_id;
     }
 
