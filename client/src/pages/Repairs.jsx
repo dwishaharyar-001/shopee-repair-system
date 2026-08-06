@@ -55,11 +55,16 @@ const Repairs = () => {
   const [nowTime, setNowTime] = useState(Date.now());
   const [branchPricesMap, setBranchPricesMap] = useState({});
   
-  // State for diagnostics, categories, & action notes per order ID
+  // State for diagnostics, categories, action notes & fault description per order ID
+  const [faultDescriptions, setFaultDescriptions] = useState({});
   const [actionNotes, setActionNotes] = useState({});
   const [diagnosticsOutcome, setDiagnosticsOutcome] = useState({});
   const [selectedCategories, setSelectedCategories] = useState({});
+
+  const [savingFault, setSavingFault] = useState({});
+  const [savingAction, setSavingAction] = useState({});
   const [savingDiagnostics, setSavingDiagnostics] = useState({});
+  const [savingCategory, setSavingCategory] = useState({});
 
   useEffect(() => {
     fetchQueue();
@@ -108,12 +113,15 @@ const Repairs = () => {
       if (res.success) {
         setQueue(res.data);
 
-        // Pre-populate forms from active log
+        // Pre-populate forms from active log and order
+        const initialFault = {};
         const initialNotes = {};
         const initialOutcome = {};
         const initialCat = {};
 
         res.data.forEach(item => {
+          initialFault[item.id] = item.fault_description || '';
+
           const sortedLogs = item.repairLogs && item.repairLogs.length > 0 
             ? [...item.repairLogs].sort((a, b) => b.id - a.id) 
             : [];
@@ -134,9 +142,38 @@ const Repairs = () => {
           }
         });
 
-        setActionNotes(initialNotes);
-        setDiagnosticsOutcome(initialOutcome);
-        setSelectedCategories(initialCat);
+        // PRESERVE user draft entries if user has typed something locally!
+        setFaultDescriptions(prev => {
+          const next = { ...initialFault };
+          Object.keys(prev).forEach(id => {
+            if (prev[id] !== undefined && prev[id] !== '') next[id] = prev[id];
+          });
+          return next;
+        });
+
+        setActionNotes(prev => {
+          const next = { ...initialNotes };
+          Object.keys(prev).forEach(id => {
+            if (prev[id] !== undefined && prev[id] !== '') next[id] = prev[id];
+          });
+          return next;
+        });
+
+        setDiagnosticsOutcome(prev => {
+          const next = { ...initialOutcome };
+          Object.keys(prev).forEach(id => {
+            if (prev[id] !== undefined && prev[id] !== '') next[id] = prev[id];
+          });
+          return next;
+        });
+
+        setSelectedCategories(prev => {
+          const next = { ...initialCat };
+          Object.keys(prev).forEach(id => {
+            if (prev[id] !== undefined && prev[id].length > 0) next[id] = prev[id];
+          });
+          return next;
+        });
       }
     } catch (err) {
       console.error('Fetch work queue error:', err);
@@ -179,6 +216,47 @@ const Repairs = () => {
     });
   };
 
+  // 1. Save Fault Description (Keluhan Kerusakan)
+  const handleSaveFaultDescription = async (orderId) => {
+    setSavingFault(prev => ({ ...prev, [orderId]: true }));
+    try {
+      const fault = faultDescriptions[orderId] || '';
+      const res = await repairService.saveDiagnostics(orderId, {
+        fault_description: fault
+      });
+      if (res.success) {
+        showToast('Deskripsi keluhan kerusakan berhasil disimpan!');
+      }
+    } catch (err) {
+      showToast('Gagal menyimpan keluhan kerusakan.');
+    } finally {
+      setSavingFault(prev => ({ ...prev, [orderId]: false }));
+    }
+  };
+
+  // 2. Save Action Taken (Tindakan Perbaikan)
+  const handleSaveActionTaken = async (orderId, isTimerRunning) => {
+    if (!isTimerRunning) {
+      showToast('⚠️ Klik "Mulai Perbaikan" terlebih dahulu untuk menyimpan catatan tindakan.');
+      return;
+    }
+    setSavingAction(prev => ({ ...prev, [orderId]: true }));
+    try {
+      const note = actionNotes[orderId] || '';
+      const res = await repairService.saveDiagnostics(orderId, {
+        action_taken: note
+      });
+      if (res.success) {
+        showToast('Catatan tindakan perbaikan berhasil disimpan!');
+      }
+    } catch (err) {
+      showToast('Gagal menyimpan catatan tindakan.');
+    } finally {
+      setSavingAction(prev => ({ ...prev, [orderId]: false }));
+    }
+  };
+
+  // 3. Save Diagnostics Outcome
   const handleSaveDiagnosticsOnly = async (orderId, isTimerRunning) => {
     if (!isTimerRunning) {
       showToast('⚠️ Klik "Mulai Perbaikan" terlebih dahulu untuk menyimpan diagnostik.');
@@ -187,22 +265,53 @@ const Repairs = () => {
     setSavingDiagnostics(prev => ({ ...prev, [orderId]: true }));
     try {
       const outcome = diagnosticsOutcome[orderId] || '';
-      const categories = selectedCategories[orderId] || [];
-      const note = actionNotes[orderId] || '';
-
       const res = await repairService.saveDiagnostics(orderId, {
-        diagnostics_outcome: outcome,
-        repair_categories: categories,
-        action_taken: note
+        diagnostics_outcome: outcome
       });
 
       if (res.success) {
-        showToast('Hasil diagnostik dan kategori perbaikan berhasil disimpan!');
+        showToast('Hasil outcome diagnostik berhasil disimpan!');
       }
     } catch (err) {
       showToast('Gagal menyimpan hasil diagnostik.');
     } finally {
       setSavingDiagnostics(prev => ({ ...prev, [orderId]: false }));
+    }
+  };
+
+  // 4. Save Kategori Perbaikan
+  const handleSaveCategoriesOnly = async (orderId, isTimerRunning) => {
+    if (!isTimerRunning) {
+      showToast('⚠️ Klik "Mulai Perbaikan" terlebih dahulu untuk menyimpan kategori perbaikan.');
+      return;
+    }
+    setSavingCategory(prev => ({ ...prev, [orderId]: true }));
+    try {
+      const categories = selectedCategories[orderId] || [];
+      const res = await repairService.saveDiagnostics(orderId, {
+        repair_categories: categories
+      });
+      if (res.success) {
+        showToast('Kategori perbaikan berhasil disimpan!');
+      }
+    } catch (err) {
+      showToast('Gagal menyimpan kategori perbaikan.');
+    } finally {
+      setSavingCategory(prev => ({ ...prev, [orderId]: false }));
+    }
+  };
+
+  // Auto-save all draft values for an order before key actions
+  const autoSaveDraftValues = async (orderId) => {
+    try {
+      await repairService.saveDiagnostics(orderId, {
+        fault_description: faultDescriptions[orderId] || '',
+        action_taken: actionNotes[orderId] || '',
+        diagnostics_outcome: diagnosticsOutcome[orderId] || '',
+        repair_categories: selectedCategories[orderId] || []
+      });
+    } catch (e) {
+      console.warn('Auto save draft warning:', e);
     }
   };
 
@@ -215,6 +324,7 @@ const Repairs = () => {
       return;
     }
     try {
+      await autoSaveDraftValues(orderId);
       const res = await repairService.removePartConsumed(orderId, partConsumedId);
       if (res.success) {
         showToast(res.message);
@@ -234,6 +344,7 @@ const Repairs = () => {
       return;
     }
     try {
+      await autoSaveDraftValues(orderId);
       const res = await repairService.removeBrokenPart(brokenPartId);
       if (res.success) {
         showToast(res.message);
@@ -246,6 +357,7 @@ const Repairs = () => {
 
   const handleStartTimer = async (orderId) => {
     try {
+      await autoSaveDraftValues(orderId);
       const res = await repairService.startTimer(orderId);
       if (res.success) {
         showToast(res.message);
@@ -284,6 +396,7 @@ const Repairs = () => {
     try {
       // First save diagnostics
       await repairService.saveDiagnostics(orderId, {
+        fault_description: faultDescriptions[orderId] || '',
         diagnostics_outcome: outcome,
         repair_categories: categories,
         action_taken: note
@@ -464,27 +577,53 @@ const Repairs = () => {
                   {/* Fault Info & Action Taken Notes */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* Fault Info */}
-                    <div className="bg-amber-50/60 border border-amber-200/80 p-4 rounded-xl space-y-1">
-                      <span className="text-[11px] font-bold uppercase text-amber-800 tracking-wider block">
-                        Keluhan Kerusakan (Initial Fault):
-                      </span>
-                      <p className="text-xs text-amber-900 leading-relaxed font-medium">
-                        {item.fault_description}
-                      </p>
+                    <div className="bg-amber-50/60 border border-amber-200/80 p-4 rounded-xl space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold uppercase text-amber-800 tracking-wider block">
+                          Keluhan Kerusakan (Initial Fault):
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleSaveFaultDescription(item.id)}
+                          disabled={savingFault[item.id]}
+                          className="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-[10px] font-bold transition-colors flex items-center space-x-1 shadow-xs disabled:opacity-40"
+                        >
+                          <Save className="w-3 h-3" />
+                          <span>{savingFault[item.id] ? 'Simpan...' : 'Simpan Keluhan'}</span>
+                        </button>
+                      </div>
+                      <textarea
+                        rows="2"
+                        value={faultDescriptions[item.id] !== undefined ? faultDescriptions[item.id] : (item.fault_description || '')}
+                        onChange={(e) => setFaultDescriptions({ ...faultDescriptions, [item.id]: e.target.value })}
+                        placeholder="Tuliskan keluhan / kendala awal perangkat..."
+                        className="w-full bg-white border border-amber-200 rounded-xl px-3 py-1.5 text-xs text-amber-900 focus:ring-2 focus:ring-amber-500 focus:outline-none font-medium"
+                      ></textarea>
                     </div>
 
                     {/* Action Taken Input */}
-                    <div className="space-y-1">
-                      <label className="block text-xs font-semibold text-slate-700">
-                        Catatan Tindakan Perbaikan (Action Taken):
-                      </label>
+                    <div className="space-y-1 bg-slate-50 border border-slate-200 p-4 rounded-xl">
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block text-xs font-bold text-slate-800">
+                          Catatan Tindakan Perbaikan (Action Taken):
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => handleSaveActionTaken(item.id, isTimerRunning)}
+                          disabled={!isTimerRunning || savingAction[item.id]}
+                          className="px-2.5 py-1 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg text-[10px] font-bold transition-colors flex items-center space-x-1 shadow-xs disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                          <Save className="w-3 h-3" />
+                          <span>{savingAction[item.id] ? 'Simpan...' : 'Simpan Tindakan'}</span>
+                        </button>
+                      </div>
                       <textarea
                         rows="2"
                         disabled={!isTimerRunning}
                         value={actionNotes[item.id] || ''}
                         onChange={(e) => setActionNotes({ ...actionNotes, [item.id]: e.target.value })}
                         placeholder={isTimerRunning ? "Tuliskan langkah tindakan perbaikan atau penggantian yang dilakukan..." : "Klik 'Mulai Perbaikan' untuk mengisi catatan..."}
-                        className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-cyan-500 focus:outline-none disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed"
+                        className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-cyan-500 focus:outline-none disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed"
                       ></textarea>
                     </div>
                   </div>
@@ -550,12 +689,24 @@ const Repairs = () => {
                           Kategori Perbaikan (Pilih Kategori Komponen):
                         </span>
                       </div>
-                      {!isTimerRunning && (
-                        <span className="text-[11px] font-semibold text-amber-700 flex items-center space-x-1">
-                          <Lock className="w-3 h-3" />
-                          <span>Pilihan Terkunci</span>
-                        </span>
-                      )}
+                      
+                      <div className="flex items-center space-x-2">
+                        {!isTimerRunning && (
+                          <span className="text-[11px] font-semibold text-amber-700 flex items-center space-x-1 mr-2">
+                            <Lock className="w-3 h-3" />
+                            <span>Pilihan Terkunci</span>
+                          </span>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => handleSaveCategoriesOnly(item.id, isTimerRunning)}
+                          disabled={!isTimerRunning || savingCategory[item.id]}
+                          className="px-3 py-1 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg text-[11px] font-semibold transition-colors flex items-center space-x-1 shadow-xs disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                          <Save className="w-3.5 h-3.5" />
+                          <span>{savingCategory[item.id] ? 'Menyimpan...' : 'Simpan Kategori'}</span>
+                        </button>
+                      </div>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5 pt-1 text-xs">

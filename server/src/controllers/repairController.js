@@ -136,11 +136,11 @@ const startTimer = async (req, res) => {
   }
 };
 
-// 3. Save Diagnostics & Repair Categories
+// 3. Save Diagnostics, Fault Description & Repair Categories
 const saveDiagnostics = async (req, res) => {
   try {
     const { id } = req.params; // service_order_id
-    const { diagnostics_outcome, repair_categories, action_taken } = req.body;
+    const { diagnostics_outcome, repair_categories, action_taken, fault_description } = req.body;
 
     let activeLog = await RepairLog.findOne({
       where: { service_order_id: id },
@@ -165,14 +165,22 @@ const saveDiagnostics = async (req, res) => {
 
     await activeLog.save();
 
+    if (fault_description !== undefined) {
+      const order = await ServiceOrder.findByPk(id);
+      if (order) {
+        order.fault_description = fault_description;
+        await order.save();
+      }
+    }
+
     return res.status(200).json({
       success: true,
-      message: 'Diagnostik dan kategori perbaikan berhasil disimpan.',
+      message: 'Informasi data perbaikan berhasil disimpan.',
       data: activeLog
     });
   } catch (error) {
     console.error('Error in saveDiagnostics:', error);
-    return res.status(500).json({ success: false, message: 'Gagal menyimpan data diagnostik.', error: error.message });
+    return res.status(500).json({ success: false, message: 'Gagal menyimpan data perbaikan.', error: error.message });
   }
 };
 
