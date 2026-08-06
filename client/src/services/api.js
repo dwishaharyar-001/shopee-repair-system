@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
+  baseURL: import.meta.env.VITE_API_BASE_URL || 'https://compactly-cargo-catchable.ngrok-free.dev/api',
   headers: {
     'Content-Type': 'application/json',
     'bypass-tunnel-reminder': 'true',
