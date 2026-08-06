@@ -19,10 +19,12 @@ import {
   Trash2,
   Lock,
   Tag,
-  Calculator
+  Calculator,
+  AlertOctagon
 } from 'lucide-react';
 import { repairService } from '../services/repairService';
 import RequestPartModal from '../components/RequestPartModal';
+import BrokenPartModal from '../components/BrokenPartModal';
 import api from '../services/api';
 
 const REPAIR_CATEGORIES = [
@@ -40,6 +42,11 @@ const Repairs = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedOrderForPart, setSelectedOrderForPart] = useState(null);
   const [isPartModalOpen, setIsPartModalOpen] = useState(false);
+
+  // Broken Part State
+  const [selectedOrderForBrokenPart, setSelectedOrderForBrokenPart] = useState(null);
+  const [isBrokenPartModalOpen, setIsBrokenPartModalOpen] = useState(false);
+
   const [toastMessage, setToastMessage] = useState('');
   const [nowTime, setNowTime] = useState(Date.now());
   const [branchPricesMap, setBranchPricesMap] = useState({});
@@ -211,6 +218,25 @@ const Repairs = () => {
       }
     } catch (err) {
       showToast(err.response?.data?.message || 'Gagal mengurangi spare part.');
+    }
+  };
+
+  const handleRemoveBrokenPart = async (orderId, brokenPartId, categoryName, isTimerRunning) => {
+    if (!isTimerRunning) {
+      showToast('⚠️ Klik "Mulai Perbaikan" terlebih dahulu untuk mengelola catatan spare part rusak.');
+      return;
+    }
+    if (!window.confirm(`Apakah Anda yakin ingin menghapus catatan spare part rusak '${categoryName}'?`)) {
+      return;
+    }
+    try {
+      const res = await repairService.removeBrokenPart(brokenPartId);
+      if (res.success) {
+        showToast(res.message);
+        fetchQueue();
+      }
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Gagal menghapus catatan spare part rusak.');
     }
   };
 
@@ -644,6 +670,78 @@ const Repairs = () => {
                     )}
                   </div>
 
+                  {/* SECTION 4: Broken / Defective Spare Parts Section */}
+                  <div className={`p-4 rounded-2xl border space-y-3 transition-all ${
+                    isTimerRunning ? 'bg-rose-50/50 border-rose-200' : 'bg-slate-100/70 border-slate-200 opacity-75'
+                  }`}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <AlertOctagon className={`w-4 h-4 ${isTimerRunning ? 'text-rose-600' : 'text-slate-400'}`} />
+                        <span className={`text-xs font-bold uppercase tracking-wider ${isTimerRunning ? 'text-rose-950' : 'text-slate-600'}`}>
+                          Pencatatan Spare Part Rusak ({item.brokenParts?.length || 0}) — Terhubung Asset ID: #{item.device?.device_id || '-'}
+                        </span>
+                        {!isTimerRunning && <Lock className="w-3.5 h-3.5 text-slate-400" />}
+                      </div>
+
+                      <button
+                        onClick={() => {
+                          if (!isTimerRunning) {
+                            showToast('⚠️ Klik "Mulai Perbaikan" terlebih dahulu untuk mencatat spare part rusak.');
+                            return;
+                          }
+                          setSelectedOrderForBrokenPart(item);
+                          setIsBrokenPartModalOpen(true);
+                        }}
+                        disabled={!isTimerRunning}
+                        className="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-[11px] font-bold transition-colors flex items-center space-x-1.5 shadow-xs disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        <AlertOctagon className="w-3.5 h-3.5" />
+                        <span>+ Catat Spare Part Rusak</span>
+                      </button>
+                    </div>
+
+                    {item.brokenParts && item.brokenParts.length > 0 ? (
+                      <div className="space-y-2 text-xs">
+                        {item.brokenParts.map((bp) => (
+                          <div key={bp.id} className="bg-white p-3 rounded-xl border border-rose-200 shadow-xs space-y-1">
+                            <div className="flex justify-between items-start">
+                              <div className="space-y-0.5">
+                                <div className="flex items-center space-x-2">
+                                  <span className="font-bold text-rose-900 bg-rose-100 px-2 py-0.5 rounded text-[11px]">
+                                    {bp.category_name}
+                                  </span>
+                                  {bp.serial_number && (
+                                    <span className="font-mono text-[10px] text-slate-600 bg-slate-100 px-2 py-0.5 rounded">
+                                      SN: {bp.serial_number}
+                                    </span>
+                                  )}
+                                  <span className="text-[10px] text-slate-400 font-mono">
+                                    Asset ID: #{item.device?.device_id || '-'}
+                                  </span>
+                                </div>
+                                <p className="text-xs text-slate-800 font-medium mt-1">
+                                  <strong className="text-rose-800">Alasan Rusak:</strong> {bp.damage_reason}
+                                </p>
+                              </div>
+
+                              <button
+                                type="button"
+                                disabled={!isTimerRunning}
+                                onClick={() => handleRemoveBrokenPart(item.id, bp.id, bp.category_name, isTimerRunning)}
+                                className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed ml-2 flex-shrink-0"
+                                title={isTimerRunning ? "Hapus Catatan Spare Part Rusak ini" : "Klik 'Mulai Perbaikan' untuk menghapus"}
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-[11px] text-slate-400 italic">Belum ada pencatatan spare part rusak untuk unit asset ini.</p>
+                    )}
+                  </div>
+
                   {/* Summary Grand Total Formula Breakdown & Submit to QC1 */}
                   <div className="pt-3 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                     <div className="bg-slate-900 text-white p-3.5 rounded-2xl space-y-1.5 font-mono shadow-inner border border-slate-800">
@@ -690,6 +788,20 @@ const Repairs = () => {
           setSelectedOrderForPart(null);
         }}
         order={selectedOrderForPart}
+        onSuccess={(msg) => {
+          showToast(msg);
+          fetchQueue();
+        }}
+      />
+
+      {/* Modal Broken Part */}
+      <BrokenPartModal
+        isOpen={isBrokenPartModalOpen}
+        onClose={() => {
+          setIsBrokenPartModalOpen(false);
+          setSelectedOrderForBrokenPart(null);
+        }}
+        order={selectedOrderForBrokenPart}
         onSuccess={(msg) => {
           showToast(msg);
           fetchQueue();

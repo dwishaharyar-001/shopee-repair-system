@@ -1,5 +1,5 @@
 const { Op } = require('sequelize');
-const { ServiceOrder, Device, Customer, Technician, User, RepairLog, Part, PartConsumed } = require('../models');
+const { ServiceOrder, Device, Customer, Technician, User, RepairLog, Part, PartConsumed, BrokenPart } = require('../models');
 
 // Helper generator for repair log code
 const generateRepairCode = (num) => {
@@ -41,6 +41,11 @@ const getWorkQueue = async (req, res) => {
           model: PartConsumed,
           as: 'consumedParts',
           include: [{ model: Part, as: 'part', attributes: ['id', 'part_number', 'name', 'unit_cost'] }]
+        },
+        {
+          model: BrokenPart,
+          as: 'brokenParts',
+          include: [{ model: User, as: 'reportedBy', attributes: ['id', 'full_name'] }]
         }
       ],
       order: [
@@ -88,6 +93,8 @@ const startTimer = async (req, res) => {
     // Update order status to 'In Repair'
     order.status = 'In Repair';
     order.assigned_technician_id = techId;
+    if (!order.assigned_tech_at) order.assigned_tech_at = new Date();
+    if (!order.repair_started_at) order.repair_started_at = new Date();
     await order.save();
 
     // Find latest log or create new log
@@ -309,6 +316,7 @@ const submitToQC1 = async (req, res) => {
 
     // Update order status to QC1 Pending
     order.status = 'QC1 Pending';
+    order.repair_finished_at = new Date();
     await order.save();
 
     // Mark active log as completed
@@ -344,6 +352,73 @@ const getPartsCatalog = async (req, res) => {
   }
 };
 
+// 7. Add Broken/Damaged Spare Part
+const addBrokenPart = async (req, res) => {
+  try {
+    const { id } = req.params; // service_order_id
+    const { category_name, serial_number, damage_reason } = req.body;
+
+    if (!category_name || !damage_reason) {
+      return res.status(400).json({
+        success: false,
+        message: 'Kategori spare part dan deskripsi alasan rusaknya wajib diisi.'
+      });
+    }
+
+    const order = await ServiceOrder.findByPk(id, {
+      include: [{ model: Device, as: 'device' }]
+    });
+
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Service order tidak ditemukan.' });
+    }
+
+    const brokenPart = await BrokenPart.create({
+      service_order_id: order.id,
+      device_id: order.device_id, // Linked to Asset ID
+      category_name: category_name.trim(),
+      serial_number: serial_number ? serial_number.trim() : null,
+      damage_reason: damage_reason.trim(),
+      reported_by_user_id: req.user ? req.user.id : null
+    });
+
+    const fullRecord = await BrokenPart.findByPk(brokenPart.id, {
+      include: [{ model: User, as: 'reportedBy', attributes: ['id', 'full_name'] }]
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: `Pencatatan spare part rusak '${category_name}' berhasil ditambahkan dan terhubung dengan Asset ID #${order.device?.device_id}.`,
+      data: fullRecord
+    });
+  } catch (error) {
+    console.error('Error in addBrokenPart:', error);
+    return res.status(500).json({ success: false, message: 'Gagal mencatat spare part rusak.', error: error.message });
+  }
+};
+
+// 8. Remove Broken Spare Part Record
+const removeBrokenPart = async (req, res) => {
+  try {
+    const { brokenPartId } = req.params;
+
+    const brokenPart = await BrokenPart.findByPk(brokenPartId);
+    if (!brokenPart) {
+      return res.status(404).json({ success: false, message: 'Catatan spare part rusak tidak ditemukan.' });
+    }
+
+    await brokenPart.destroy();
+
+    return res.status(200).json({
+      success: true,
+      message: 'Catatan spare part rusak berhasil dihapus.'
+    });
+  } catch (error) {
+    console.error('Error in removeBrokenPart:', error);
+    return res.status(500).json({ success: false, message: 'Gagal menghapus catatan spare part rusak.', error: error.message });
+  }
+};
+
 module.exports = {
   getWorkQueue,
   startTimer,
@@ -352,5 +427,7 @@ module.exports = {
   requestPart,
   removePartConsumed,
   submitToQC1,
-  getPartsCatalog
+  getPartsCatalog,
+  addBrokenPart,
+  removeBrokenPart
 };

@@ -201,7 +201,7 @@ const QC = () => {
                     <th className="py-3 px-4">Brand & Model Perangkat</th>
                     <th className="py-3 px-4">Inspector QA</th>
                     <th className="py-3 px-4">Hasil Overall</th>
-                    <th className="py-3 px-4">Tanggal Audit</th>
+                    <th className="py-3 px-4">Tanggal Release QC</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -233,7 +233,7 @@ const QC = () => {
                         </span>
                       </td>
                       <td className="py-3.5 px-4 font-mono text-slate-500 text-[11px]">
-                        {new Date(log.qc_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        {new Date(log.qc_date).toLocaleString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                       </td>
                     </tr>
                   ))}
@@ -287,9 +287,10 @@ const QC = () => {
                       <td className="py-3.5 px-4 text-center">
                         {activeTab === 'qc1' ? (
                           <button
-                            onClick={() => {
+                            onClick={async () => {
                               setSelectedOrder(row);
                               setIsQC1Open(true);
+                              try { await api.post(`/qc/checkpoint1/start/${row.id}`); } catch (e) {}
                             }}
                             className="px-3.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-amber-500/20 flex items-center space-x-1.5 mx-auto"
                           >
@@ -298,9 +299,10 @@ const QC = () => {
                           </button>
                         ) : (
                           <button
-                            onClick={() => {
+                            onClick={async () => {
                               setSelectedOrder(row);
                               setIsQC2Open(true);
+                              try { await api.post(`/qc/checkpoint2/start/${row.id}`); } catch (e) {}
                             }}
                             className="px-3.5 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-purple-600/20 flex items-center space-x-1.5 mx-auto"
                           >

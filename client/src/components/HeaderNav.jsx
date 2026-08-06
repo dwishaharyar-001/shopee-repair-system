@@ -22,7 +22,7 @@ const HeaderNav = () => {
     }
   };
 
-  const canUploadSignature = user?.role === 'Coordinator' || user?.role === 'Admin';
+  const canUploadSignature = user?.role === 'Coordinator' || user?.role === 'Admin' || user?.role === 'QA_Liaison';
 
   return (
     <>
@@ -70,22 +70,6 @@ const HeaderNav = () => {
                   @{user.username}
                 </span>
               </div>
-
-              {/* Coordinator Signature Button */}
-              {canUploadSignature && (
-                <button
-                  onClick={() => setIsSigModalOpen(true)}
-                  title="Upload / Kelola Tanda Tangan Coordinator"
-                  className={`flex items-center space-x-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all border shadow-xs ${
-                    user.signature_url
-                      ? 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100'
-                      : 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 animate-pulse'
-                  }`}
-                >
-                  <Edit3 className="w-3.5 h-3.5 text-blue-600" />
-                  <span>{user.signature_url ? '✍️ TTD Coordinator ✅' : '✍️ Upload TTD'}</span>
-                </button>
-              )}
 
               {/* Logout Button */}
               <button

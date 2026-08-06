@@ -19,4 +19,7 @@ router.put('/service-orders/:id', deviceController.updateServiceOrder);
 // Master Devices endpoints
 router.get('/master', deviceController.getDevices);
 
+// Real Dashboard Stats endpoint
+router.get('/dashboard-stats', deviceController.getDashboardStats);
+
 module.exports = router;

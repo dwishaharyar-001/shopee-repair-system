@@ -267,8 +267,98 @@ const getBASTDocument = async (req, res) => {
   }
 };
 
+/**
+ * 4. Export KPI Data Excel (CSV)
+ * Exports full lifecycle timestamps per service order into Excel-compatible CSV format
+ */
+const exportKPICSV = async (req, res) => {
+  try {
+    const orders = await ServiceOrder.findAll({
+      include: [
+        { model: Device, as: 'device' },
+        { model: Customer, as: 'customer' },
+        { model: Branch, as: 'branch' },
+        {
+          model: Technician,
+          as: 'assignedTechnician',
+          include: [{ model: User, as: 'user', attributes: ['id', 'full_name'] }]
+        }
+      ],
+      order: [['created_at', 'DESC']]
+    });
+
+    const formatDateTime = (dt) => {
+      if (!dt) return '-';
+      const d = new Date(dt);
+      if (isNaN(d.getTime())) return '-';
+      return d.toLocaleString('id-ID', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      });
+    };
+
+    const headers = [
+      'No',
+      'Service ID',
+      'Device ID',
+      'Serial Number',
+      'Brand & Model',
+      'Asset Type',
+      'Customer',
+      'Cabang / Branch',
+      'Teknisi Penanggung Jawab',
+      'Status Unit',
+      '1. Tanggal Intake (Intake Date)',
+      '2. Tanggal Assign Teknisi (Assigned Date)',
+      '3. Tanggal Mulai Perbaikan (Repair Started)',
+      '4. Tanggal Selesai Perbaikan (Repair Finished)',
+      '5. Tanggal Mulai QC1 Arisa (QC1 Started)',
+      '6. Tanggal Selesai QC1 Arisa (QC1 Finished)',
+      '7. Tanggal Mulai QC2 Shopee (QC2 Started)',
+      '8. Tanggal Selesai QC2 Shopee (QC2 Finished)',
+      '9. Tanggal Release Unit (Released Date)'
+    ];
+
+    const rows = orders.map((o, idx) => [
+      idx + 1,
+      `"${o.service_id || ''}"`,
+      `"${o.device?.device_id || ''}"`,
+      `"${o.device?.serial_number || ''}"`,
+      `"${o.device ? `${o.device.brand} ${o.device.model}` : ''}"`,
+      `"${o.device?.asset_type || ''}"`,
+      `"${o.customer?.name || ''}"`,
+      `"${o.branch?.name || ''}"`,
+      `"${o.assignedTechnician?.user?.full_name || 'Unassigned'}"`,
+      `"${o.status || ''}"`,
+      `"${formatDateTime(o.intake_date || o.created_at)}"`,
+      `"${formatDateTime(o.assigned_tech_at)}"`,
+      `"${formatDateTime(o.repair_started_at)}"`,
+      `"${formatDateTime(o.repair_finished_at)}"`,
+      `"${formatDateTime(o.qc1_started_at)}"`,
+      `"${formatDateTime(o.qc1_finished_at)}"`,
+      `"${formatDateTime(o.qc2_started_at)}"`,
+      `"${formatDateTime(o.qc2_finished_at)}"`,
+      `"${formatDateTime(o.released_date)}"`
+    ]);
+
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="KPI_Report_Lifecycle_Timestamps.csv"');
+    return res.status(200).send(csvContent);
+  } catch (error) {
+    console.error('Error in exportKPICSV:', error);
+    return res.status(500).json({ success: false, message: 'Gagal mengeksport data KPI ke CSV.', error: error.message });
+  }
+};
+
 module.exports = {
   getTechnicianTaskReport,
   getDeviceTaskReport,
-  getBASTDocument
+  getBASTDocument,
+  exportKPICSV
 };

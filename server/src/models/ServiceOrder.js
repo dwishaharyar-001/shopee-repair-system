@@ -69,6 +69,34 @@ const ServiceOrder = sequelize.define('ServiceOrder', {
     type: DataTypes.DATE,
     allowNull: true
   },
+  assigned_tech_at: {
+    type: DataTypes.DATE,
+    allowNull: true
+  },
+  repair_started_at: {
+    type: DataTypes.DATE,
+    allowNull: true
+  },
+  repair_finished_at: {
+    type: DataTypes.DATE,
+    allowNull: true
+  },
+  qc1_started_at: {
+    type: DataTypes.DATE,
+    allowNull: true
+  },
+  qc1_finished_at: {
+    type: DataTypes.DATE,
+    allowNull: true
+  },
+  qc2_started_at: {
+    type: DataTypes.DATE,
+    allowNull: true
+  },
+  qc2_finished_at: {
+    type: DataTypes.DATE,
+    allowNull: true
+  },
   notes: {
     type: DataTypes.TEXT,
     allowNull: true

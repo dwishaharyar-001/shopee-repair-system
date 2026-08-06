@@ -6,12 +6,16 @@ import { useAuth } from '../context/AuthContext';
 const BASTDocumentModal = ({ isOpen, onClose, orderId }) => {
   const { user } = useAuth();
   const [data, setData] = useState(null);
+  const [allUsers, setAllUsers] = useState([]);
+  const [selectedCoordinatorId, setSelectedCoordinatorId] = useState('');
+  const [selectedQCShopeeId, setSelectedQCShopeeId] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
     if (isOpen && orderId) {
       fetchBASTData();
+      fetchUsers();
     }
   }, [isOpen, orderId]);
 
@@ -22,6 +26,9 @@ const BASTDocumentModal = ({ isOpen, onClose, orderId }) => {
       const res = await api.get(`/reports/bast/${orderId}`);
       if (res.data && res.data.success) {
         setData(res.data.data);
+        if (res.data.data.coordinator) {
+          setSelectedCoordinatorId(String(res.data.data.coordinator.id));
+        }
       } else {
         setError(res.data?.message || 'Gagal memuat dokumen BAST.');
       }
@@ -33,6 +40,34 @@ const BASTDocumentModal = ({ isOpen, onClose, orderId }) => {
     }
   };
 
+  const fetchUsers = async () => {
+    try {
+      const res = await api.get('/menu/users');
+      if (res.data && res.data.success) {
+        const usersList = res.data.data || [];
+        setAllUsers(usersList);
+
+        // Auto select first QC Shopee user if not selected
+        const shopeeUsers = usersList.filter(u => 
+          (u.role === 'QA_Liaison' && u.qc_affiliation === 'Shopee') || 
+          (u.role === 'QA_Liaison' && !u.qc_affiliation) ||
+          u.role === 'Admin'
+        );
+        if (shopeeUsers.length > 0 && !selectedQCShopeeId) {
+          setSelectedQCShopeeId(String(shopeeUsers[0].id));
+        }
+
+        // Auto select coordinator user if not selected
+        const coordUsers = usersList.filter(u => u.role === 'Coordinator' || u.role === 'Admin');
+        if (coordUsers.length > 0 && !selectedCoordinatorId) {
+          setSelectedCoordinatorId(String(coordUsers[0].id));
+        }
+      }
+    } catch (err) {
+      console.error('Fetch users error in BAST:', err);
+    }
+  };
+
   if (!isOpen) return null;
 
   const handlePrint = () => {
@@ -40,34 +75,32 @@ const BASTDocumentModal = ({ isOpen, onClose, orderId }) => {
   };
 
   const order = data?.order;
-  const coordinator = data?.coordinator || (user?.role === 'Coordinator' ? user : null);
 
-  // Preferred signature URL: coordinator signature -> logged in coordinator signature
-  const signatureUrl = coordinator?.signature_url || (user?.role === 'Coordinator' ? user.signature_url : null);
-  const coordinatorName = coordinator?.full_name || 'Coordinator Penanggung Jawab';
+  // Filter Users Lists
+  const coordinatorUsers = allUsers.filter(u => u.role === 'Coordinator' || u.role === 'Admin');
+  const qcShopeeUsers = allUsers.filter(u => 
+    (u.role === 'QA_Liaison' && u.qc_affiliation === 'Shopee') ||
+    u.role === 'Admin' ||
+    (u.role === 'QA_Liaison' && !u.qc_affiliation)
+  );
+
+  const currentCoordinator = allUsers.find(u => String(u.id) === String(selectedCoordinatorId)) || data?.coordinator || (user?.role === 'Coordinator' ? user : null);
+  const currentQCShopee = allUsers.find(u => String(u.id) === String(selectedQCShopeeId)) || (qcShopeeUsers.length > 0 ? qcShopeeUsers[0] : null);
+
+  const coordinatorSignature = currentCoordinator?.signature_url || null;
+  const qcShopeeSignature = currentQCShopee?.signature_url || null;
 
   // Calculate pricing summary
-  const diagnosticsFee = 50000;
   const consumedParts = order?.consumedParts || [];
-  const partsTotal = consumedParts.reduce((acc, curr) => acc + (parseFloat(curr.total_cost) || 0), 0);
 
   // Latest repair log notes & categories
   const latestLog = order?.repairLogs && order.repairLogs.length > 0
     ? [...order.repairLogs].sort((a, b) => b.id - a.id)[0]
     : null;
 
-  let categories = [];
-  if (latestLog?.repair_categories) {
-    try {
-      categories = typeof latestLog.repair_categories === 'string' ? JSON.parse(latestLog.repair_categories) : latestLog.repair_categories;
-    } catch (e) {
-      categories = [];
-    }
-  }
-
   const currentDateStr = new Date().toLocaleDateString('id-ID', {
     day: 'numeric',
-    month: 'Long',
+    month: 'long',
     year: 'numeric'
   });
 
@@ -82,8 +115,8 @@ const BASTDocumentModal = ({ isOpen, onClose, orderId }) => {
               📄
             </div>
             <div>
-              <h3 className="font-bold text-base">Dokumen Resmi BAST (Berita Acara Serah Terima)</h3>
-              <p className="text-xs text-slate-400">Pratinjau & Cetak Dokumen Penyerahan Asset dengan Tanda Tangan Coordinator</p>
+              <h3 className="font-bold text-base">Dokumen BAST Handover (Shopee ➔ Arisa Computer)</h3>
+              <p className="text-xs text-slate-400">Pilih PIC Coordinator Arisa & PIC QC Shopee untuk penandatanganan Berita Acara</p>
             </div>
           </div>
 
@@ -128,7 +161,7 @@ const BASTDocumentModal = ({ isOpen, onClose, orderId }) => {
                     <span className="text-xs font-bold text-slate-500">Asset Management System</span>
                   </div>
                   <h1 className="text-xl font-black uppercase text-slate-900 mt-2 tracking-tight">
-                    BERITA ACARA SERAH TERIMA (BAST)
+                    BERITA ACARA SERAH TERIMA HANDOVER (BAST)
                   </h1>
                   <p className="text-xs text-slate-600 mt-0.5">
                     Nomor Dokumen: <span className="font-mono font-bold text-slate-900">BAST/{order?.service_id}/{new Date().getFullYear()}</span>
@@ -219,75 +252,122 @@ const BASTDocumentModal = ({ isOpen, onClose, orderId }) => {
                 </table>
               </div>
 
-              {/* Notice & Warranty statement */}
+              {/* Notice statement */}
               <div className="p-3.5 bg-blue-50/50 border border-blue-200 rounded-xl text-[11px] text-blue-900 leading-relaxed print:bg-white print:border-slate-300">
-                <strong>Pernyataan & Garansi Perbaikan:</strong> Dengan ditandatanganinya Berita Acara Serah Terima (BAST) ini, pihak Pelanggan/Klien menyatakan telah memeriksa dan menerima unit perangkat dalam kondisi baik dan berfungsi normal sesuai hasil uji QC. Garansi perbaikan berlaku selama 30 hari kalender sejak tanggal serah terima.
+                <strong>Pernyataan Handover:</strong> Dengan ditandatanganinya Berita Acara Serah Terima Handover (Shopee ➔ Arisa Computer) ini, kedua belah pihak menyatakan penyerahan unit perangkat perbaikan telah terverifikasi dan memenuhi standar QC.
               </div>
 
               {/* ========================================================================= */}
-              {/* SIGN-OFF SECTION (CRITICAL: COORDINATOR SIGNATURE PLACED ABOVE NAME)      */}
+              {/* SIGN-OFF SECTION WITH DROPDOWN SELECTS FOR COORDINATOR ARISA & QC SHOPEE */}
               {/* ========================================================================= */}
               <div className="pt-6 space-y-4">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 text-center border-b border-slate-200 pb-2">
-                  PERSETUJUAN & SERAH TERIMA (SIGN-OFF)
+                  PERSETUJUAN & SERAH TERIMA HANDOVER (SIGN-OFF)
                 </h3>
 
                 <div className="grid grid-cols-3 gap-6 text-center text-xs pt-2">
-                  {/* Column 1: Customer */}
-                  <div className="flex flex-col justify-between h-44 border border-slate-200 rounded-xl p-3 print:border-slate-300">
-                    <span className="font-bold text-slate-700 uppercase tracking-wider text-[10px]">
-                      Yang Menerima (Customer/Klien)
-                    </span>
+                  {/* Column 1: PIC Arisa (Coordinator Arisa Dropdown) */}
+                  <div className="flex flex-col justify-between h-48 border border-blue-200 bg-blue-50/20 rounded-xl p-3 print:border-slate-300 print:bg-white">
+                    <div>
+                      <span className="font-bold text-blue-950 uppercase tracking-wider text-[10px] block mb-1 print:text-black">
+                        Diserahkan Oleh (PIC Arisa Computer)
+                      </span>
+                      {/* Dropdown Select Coordinator Arisa (Screen mode) */}
+                      <div className="print:hidden">
+                        <select
+                          value={selectedCoordinatorId}
+                          onChange={(e) => setSelectedCoordinatorId(e.target.value)}
+                          className="w-full bg-white border border-blue-300 rounded px-2 py-1 text-[11px] font-bold text-slate-800 focus:ring-1 focus:ring-blue-500"
+                        >
+                          <option value="">-- Pilih Coordinator Arisa --</option>
+                          {coordinatorUsers.map(u => (
+                            <option key={u.id} value={u.id}>
+                              👤 {u.full_name} ({u.role})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
                     
-                    {/* Empty box for physical customer signature */}
-                    <div className="h-24 flex items-center justify-center text-slate-300 italic text-[10px]">
-                      ( Tanda Tangan Customer )
-                    </div>
-
-                    <div className="border-t border-slate-300 pt-1.5 font-bold text-slate-900">
-                      {order?.customer?.name || 'Customer'}
-                    </div>
-                  </div>
-
-                  {/* Column 2: QA Inspector */}
-                  <div className="flex flex-col justify-between h-44 border border-slate-200 rounded-xl p-3 print:border-slate-300">
-                    <span className="font-bold text-slate-700 uppercase tracking-wider text-[10px]">
-                      Yang Memeriksa (QA Inspector)
-                    </span>
-                    
-                    <div className="h-24 flex items-center justify-center text-emerald-700 font-bold text-xs flex-col space-y-1">
-                      <CheckCircle2 className="w-6 h-6 text-emerald-600 mx-auto" />
-                      <span className="text-[10px] bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">VERIFIED QC PASSED</span>
-                    </div>
-
-                    <div className="border-t border-slate-300 pt-1.5 font-bold text-slate-900">
-                      QA Inspector Shopee
-                    </div>
-                  </div>
-
-                  {/* Column 3: Coordinator (SIGNATURE PLACED ABOVE NAME) */}
-                  <div className="flex flex-col justify-between h-44 border border-blue-200 bg-blue-50/20 rounded-xl p-3 print:border-slate-300 print:bg-white">
-                    <span className="font-bold text-blue-950 uppercase tracking-wider text-[10px] print:text-black">
-                      Diserahkan Oleh (Coordinator)
-                    </span>
-                    
-                    {/* SIGNATURE IMAGE PLACED ABOVE NAME */}
-                    <div className="h-24 flex items-center justify-center px-2 relative">
-                      {signatureUrl ? (
+                    {/* SIGNATURE IMAGE */}
+                    <div className="h-20 flex items-center justify-center px-2 relative my-1">
+                      {coordinatorSignature ? (
                         <img
-                          src={signatureUrl}
-                          alt={`Tanda Tangan ${coordinatorName}`}
-                          className="max-h-20 max-w-full object-contain mx-auto"
+                          src={coordinatorSignature}
+                          alt={`Tanda Tangan Coordinator`}
+                          className="max-h-16 max-w-full object-contain mx-auto"
                         />
                       ) : (
-                        <div className="text-amber-700 text-[10px] italic border border-dashed border-amber-300 rounded p-2 bg-amber-50/60 print:border-slate-300">
-                          (Belum Mengunggah TTD Coordinator)
+                        <div className="text-amber-700 text-[10px] italic border border-dashed border-amber-300 rounded p-1.5 bg-amber-50/60 print:border-slate-300">
+                          (Belum ada TTD)
                         </div>
                       )}
                     </div>
 
                     <div className="border-t border-slate-300 pt-1.5 font-bold text-slate-900">
-                      {coordinatorName}
+                      {currentCoordinator?.full_name || 'Coordinator Arisa'}
+                      <div className="text-[10px] text-slate-500 font-normal">Coordinator Arisa Computer</div>
+                    </div>
+                  </div>
+
+                  {/* Column 2: PIC Shopee (QC Shopee Dropdown) */}
+                  <div className="flex flex-col justify-between h-48 border border-orange-200 bg-orange-50/20 rounded-xl p-3 print:border-slate-300 print:bg-white">
+                    <div>
+                      <span className="font-bold text-orange-950 uppercase tracking-wider text-[10px] block mb-1 print:text-black">
+                        Yang Menerima (Nama PIC Shopee)
+                      </span>
+                      {/* Dropdown Select QC Shopee (Screen mode) */}
+                      <div className="print:hidden">
+                        <select
+                          value={selectedQCShopeeId}
+                          onChange={(e) => setSelectedQCShopeeId(e.target.value)}
+                          className="w-full bg-white border border-orange-300 rounded px-2 py-1 text-[11px] font-bold text-slate-800 focus:ring-1 focus:ring-orange-500"
+                        >
+                          <option value="">-- Pilih QC Shopee --</option>
+                          {qcShopeeUsers.map(u => (
+                            <option key={u.id} value={u.id}>
+                              🛍️ {u.full_name} ({u.qc_affiliation || 'QC Shopee'})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                    
+                    {/* SIGNATURE IMAGE */}
+                    <div className="h-20 flex items-center justify-center px-2 relative my-1">
+                      {qcShopeeSignature ? (
+                        <img
+                          src={qcShopeeSignature}
+                          alt={`Tanda Tangan QC Shopee`}
+                          className="max-h-16 max-w-full object-contain mx-auto"
+                        />
+                      ) : (
+                        <div className="text-slate-400 text-[10px] italic border border-dashed border-slate-300 rounded p-1.5 bg-slate-50">
+                          (Tanda Tangan QC Shopee)
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="border-t border-slate-300 pt-1.5 font-bold text-slate-900">
+                      {currentQCShopee?.full_name || 'PIC QC Shopee'}
+                      <div className="text-[10px] text-slate-500 font-normal">QC Inspector Shopee</div>
+                    </div>
+                  </div>
+
+                  {/* Column 3: QA Inspector Verification */}
+                  <div className="flex flex-col justify-between h-48 border border-emerald-200 bg-emerald-50/20 rounded-xl p-3 print:border-slate-300 print:bg-white">
+                    <span className="font-bold text-emerald-950 uppercase tracking-wider text-[10px] block mb-1 print:text-black">
+                      Yang Memeriksa (QA Inspector)
+                    </span>
+                    
+                    <div className="h-24 flex items-center justify-center text-emerald-700 font-bold text-xs flex-col space-y-1 my-1">
+                      <CheckCircle2 className="w-7 h-7 text-emerald-600 mx-auto" />
+                      <span className="text-[10px] bg-emerald-100 px-2 py-0.5 rounded border border-emerald-300 font-bold">VERIFIED QC PASSED</span>
+                    </div>
+
+                    <div className="border-t border-slate-300 pt-1.5 font-bold text-slate-900">
+                      Tim Quality Assurance
+                      <div className="text-[10px] text-slate-500 font-normal">Inspector Hardware Audit</div>
                     </div>
                   </div>
                 </div>
@@ -299,17 +379,10 @@ const BASTDocumentModal = ({ isOpen, onClose, orderId }) => {
         {/* Footer info (Hidden when printing) */}
         <div className="bg-slate-50 px-6 py-4 border-t border-slate-200 flex justify-between items-center text-xs print:hidden">
           <div className="text-slate-500">
-            {signatureUrl ? (
-              <span className="text-emerald-700 font-semibold flex items-center space-x-1">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                <span>Tanda tangan Coordinator terpasang otomatis di atas nama.</span>
-              </span>
-            ) : (
-              <span className="text-amber-700 font-semibold flex items-center space-x-1">
-                <AlertCircle className="w-4 h-4 text-amber-600" />
-                <span>Coordinator belum mengunggah tanda tangan. Gunakan tombol 'Tanda Tangan' di navigasi atas.</span>
-              </span>
-            )}
+            <span className="text-emerald-700 font-semibold flex items-center space-x-1">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+              <span>Gunakan dropdown di atas untuk memilih PIC Coordinator Arisa & PIC QC Shopee.</span>
+            </span>
           </div>
 
           <button

@@ -173,6 +173,22 @@ const Reports = () => {
     return true;
   });
 
+  const handleExportCSV = async () => {
+    try {
+      const res = await api.get('/reports/export-csv', { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `KPI_Report_Lifecycle_Timestamps_${new Date().toISOString().slice(0,10)}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (err) {
+      console.error('Export CSV error:', err);
+      alert('Gagal mengunduh file Excel (CSV).');
+    }
+  };
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       {/* Top Banner Header */}
@@ -189,8 +205,17 @@ const Reports = () => {
           </div>
         </div>
 
-        {/* Global Branch Filter & Refresh */}
+        {/* Global Branch Filter, Export Excel & Refresh */}
         <div className="flex flex-wrap items-center gap-3">
+          <button
+            onClick={handleExportCSV}
+            className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center space-x-1.5"
+            title="Unduh Data Excel (CSV) seluruh timestamp lifecycle"
+          >
+            <FileText className="w-4 h-4" />
+            <span>Unduh Data Excel (CSV)</span>
+          </button>
+
           <select
             value={selectedBranch}
             onChange={(e) => setSelectedBranch(e.target.value)}

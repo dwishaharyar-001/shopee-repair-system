@@ -72,6 +72,19 @@ const startServer = async () => {
     try {
       await sequelize.query('ALTER TABLE users ADD COLUMN signature_url TEXT;');
     } catch (e) {}
+    try {
+      await sequelize.query("ALTER TABLE users ADD COLUMN delete_status VARCHAR(20) DEFAULT 'none';");
+    } catch (e) {}
+    try {
+      await sequelize.query("ALTER TABLE users ADD COLUMN qc_affiliation VARCHAR(20) DEFAULT 'Arisa';");
+    } catch (e) {}
+    try { await sequelize.query('ALTER TABLE service_orders ADD COLUMN assigned_tech_at DATETIME;'); } catch (e) {}
+    try { await sequelize.query('ALTER TABLE service_orders ADD COLUMN repair_started_at DATETIME;'); } catch (e) {}
+    try { await sequelize.query('ALTER TABLE service_orders ADD COLUMN repair_finished_at DATETIME;'); } catch (e) {}
+    try { await sequelize.query('ALTER TABLE service_orders ADD COLUMN qc1_started_at DATETIME;'); } catch (e) {}
+    try { await sequelize.query('ALTER TABLE service_orders ADD COLUMN qc1_finished_at DATETIME;'); } catch (e) {}
+    try { await sequelize.query('ALTER TABLE service_orders ADD COLUMN qc2_started_at DATETIME;'); } catch (e) {}
+    try { await sequelize.query('ALTER TABLE service_orders ADD COLUMN qc2_finished_at DATETIME;'); } catch (e) {}
     console.log('✅ Skema tabel Sequelize berhasil di-sync.');
 
     await ensureDefaultBranches();

@@ -9,7 +9,9 @@ router.use(verifyToken);
 router.get('/pending', qcController.getQCPendingQueue);
 router.get('/history', qcController.getQCHistory);
 router.get('/metrics', qcController.getQCMetrics);
+router.post('/checkpoint1/start/:id', qcController.startQC1);
 router.post('/checkpoint1', qcController.submitQC1);
+router.post('/checkpoint2/start/:id', qcController.startQC2);
 router.post('/checkpoint2', qcController.submitQC2);
 
 module.exports = router;

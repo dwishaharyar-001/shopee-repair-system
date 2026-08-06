@@ -41,6 +41,24 @@ const getQCPendingQueue = async (req, res) => {
   }
 };
 
+// Start QC1 Audit (Record QC1 Start Timestamp)
+const startQC1 = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const order = await ServiceOrder.findByPk(id);
+    if (!order) return res.status(404).json({ success: false, message: 'Order tidak ditemukan.' });
+
+    if (!order.qc1_started_at) {
+      order.qc1_started_at = new Date();
+      await order.save();
+    }
+
+    return res.status(200).json({ success: true, message: 'Timestamp Mulai Audit QC1 Arisa dicatat.', data: order });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: 'Gagal mencatat timestamp mulai QC1.', error: error.message });
+  }
+};
+
 // 2. Submit QC Checkpoint 1 (Arisa Hardware Inspection)
 const submitQC1 = async (req, res) => {
   try {
@@ -54,6 +72,10 @@ const submitQC1 = async (req, res) => {
     if (!order) {
       return res.status(404).json({ success: false, message: 'Service Order tidak ditemukan.' });
     }
+
+    // Record QC1 Start and Finish Timestamps
+    if (!order.qc1_started_at) order.qc1_started_at = new Date();
+    order.qc1_finished_at = new Date();
 
     const count = await QCCheckpoint.count();
     const qcCode = generateQCCode(count + 1);
@@ -106,6 +128,24 @@ const submitQC1 = async (req, res) => {
   }
 };
 
+// Start QC2 Audit (Record QC2 Start Timestamp)
+const startQC2 = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const order = await ServiceOrder.findByPk(id);
+    if (!order) return res.status(404).json({ success: false, message: 'Order tidak ditemukan.' });
+
+    if (!order.qc2_started_at) {
+      order.qc2_started_at = new Date();
+      await order.save();
+    }
+
+    return res.status(200).json({ success: true, message: 'Timestamp Mulai Audit QC2 Shopee dicatat.', data: order });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: 'Gagal mencatat timestamp mulai QC2.', error: error.message });
+  }
+};
+
 // 3. Submit QC Checkpoint 2 (Shopee Final Release Inspection)
 const submitQC2 = async (req, res) => {
   try {
@@ -119,6 +159,10 @@ const submitQC2 = async (req, res) => {
     if (!order) {
       return res.status(404).json({ success: false, message: 'Service Order tidak ditemukan.' });
     }
+
+    // Record QC2 Start and Finish Timestamps
+    if (!order.qc2_started_at) order.qc2_started_at = new Date();
+    order.qc2_finished_at = new Date();
 
     const count = await QCCheckpoint.count();
     const qcCode = generateQCCode(count + 1);
@@ -231,7 +275,9 @@ const getQCMetrics = async (req, res) => {
 
 module.exports = {
   getQCPendingQueue,
+  startQC1,
   submitQC1,
+  startQC2,
   submitQC2,
   getQCHistory,
   getQCMetrics

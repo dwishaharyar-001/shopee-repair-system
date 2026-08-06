@@ -12,6 +12,7 @@ const HarvestLog = require('./HarvestLog');
 const RoleMenuAccess = require('./RoleMenuAccess');
 const Branch = require('./Branch');
 const BranchCategoryPrice = require('./BranchCategoryPrice');
+const BrokenPart = require('./BrokenPart');
 
 // Branch <-> BranchCategoryPrice
 Branch.hasMany(BranchCategoryPrice, { foreignKey: 'branch_id', as: 'categoryPrices' });
@@ -93,9 +94,17 @@ HarvestLog.belongsTo(Device, { foreignKey: 'source_device_id', as: 'sourceDevice
 Part.hasMany(HarvestLog, { foreignKey: 'part_id', as: 'harvestLogs' });
 HarvestLog.belongsTo(Part, { foreignKey: 'part_id', as: 'part' });
 
-// User (Harvester) <-> HarvestLog
-User.hasMany(HarvestLog, { foreignKey: 'harvested_by_user_id', as: 'harvestLogs' });
-HarvestLog.belongsTo(User, { foreignKey: 'harvested_by_user_id', as: 'harvestedBy' });
+// ServiceOrder <-> BrokenPart
+ServiceOrder.hasMany(BrokenPart, { foreignKey: 'service_order_id', as: 'brokenParts' });
+BrokenPart.belongsTo(ServiceOrder, { foreignKey: 'service_order_id', as: 'serviceOrder' });
+
+// Device <-> BrokenPart
+Device.hasMany(BrokenPart, { foreignKey: 'device_id', as: 'brokenParts' });
+BrokenPart.belongsTo(Device, { foreignKey: 'device_id', as: 'device' });
+
+// User <-> BrokenPart
+User.hasMany(BrokenPart, { foreignKey: 'reported_by_user_id', as: 'reportedBrokenParts' });
+BrokenPart.belongsTo(User, { foreignKey: 'reported_by_user_id', as: 'reportedBy' });
 
 module.exports = {
   sequelize,
@@ -111,5 +120,6 @@ module.exports = {
   HarvestLog,
   RoleMenuAccess,
   Branch,
-  BranchCategoryPrice
+  BranchCategoryPrice,
+  BrokenPart
 };

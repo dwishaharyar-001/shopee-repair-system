@@ -13,6 +13,8 @@ router.put('/orders/:id/diagnostics', repairController.saveDiagnostics);
 router.post('/orders/:id/stop', repairController.stopTimer);
 router.post('/orders/:id/request-part', repairController.requestPart);
 router.delete('/orders/:id/parts/:partConsumedId', repairController.removePartConsumed);
+router.post('/orders/:id/broken-parts', repairController.addBrokenPart);
+router.delete('/broken-parts/:brokenPartId', repairController.removeBrokenPart);
 router.post('/orders/:id/submit-qc1', repairController.submitToQC1);
 
 module.exports = router;

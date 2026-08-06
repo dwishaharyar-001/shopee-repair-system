@@ -127,8 +127,8 @@ const SignatureModal = ({ isOpen, onClose, onSuccess }) => {
               ✍️
             </div>
             <div>
-              <h3 className="font-bold text-base">Tanda Tangan Coordinator</h3>
-              <p className="text-xs text-slate-400">Upload / Buat tanda tangan untuk Sign-off BAST</p>
+              <h3 className="font-bold text-base">Tanda Tangan Digital ({user?.role === 'QA_Liaison' ? 'QC Shopee' : user?.role})</h3>
+              <p className="text-xs text-slate-400">Upload / Buat tanda tangan digital untuk Sign-off BAST</p>
             </div>
           </div>
           <button
@@ -220,7 +220,7 @@ const SignatureModal = ({ isOpen, onClose, onSuccess }) => {
 
           {/* Signature Preview Box */}
           <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-2">
-            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">Preview Tanda Tangan Coordinator:</span>
+            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">Preview Tanda Tangan Digital:</span>
             {signatureData ? (
               <div className="bg-white border border-slate-200 rounded-xl p-3 flex items-center justify-center h-28 relative">
                 <img

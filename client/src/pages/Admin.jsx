@@ -66,6 +66,8 @@ const Admin = () => {
     role: 'Technician',
     branch_id: '',
     skill_level: 'Hardware Specialist',
+    qc_affiliation: 'Arisa',
+    signature_url: '',
     is_active: true
   });
   const [userFormError, setUserFormError] = useState('');
@@ -270,6 +272,8 @@ const Admin = () => {
       role: 'Technician',
       branch_id: '',
       skill_level: 'Hardware Specialist',
+      qc_affiliation: 'Arisa',
+      signature_url: '',
       is_active: true
     });
     setUserFormError('');
@@ -286,6 +290,8 @@ const Admin = () => {
       role: u.role,
       branch_id: u.branch_id ? String(u.branch_id) : '',
       skill_level: u.technicianProfile?.skill_level || 'Hardware Specialist',
+      qc_affiliation: u.qc_affiliation || 'Arisa',
+      signature_url: u.signature_url || '',
       is_active: u.is_active
     });
     setUserFormError('');
@@ -833,7 +839,7 @@ const Admin = () => {
                         <td className="py-3.5 px-6 text-slate-600 font-mono text-xs">@{u.username}</td>
                         <td className="py-3.5 px-6">
                           <span className={`inline-block px-3 py-0.5 rounded-full border text-xs font-semibold ${getRoleBadge(u.role)}`}>
-                            {u.role}
+                            {u.role} {u.role === 'QA_Liaison' ? `(${u.qc_affiliation || 'Arisa'})` : ''}
                           </span>
                         </td>
                         <td className="py-3.5 px-6">
@@ -1131,6 +1137,23 @@ const Admin = () => {
                   </select>
                 </div>
 
+                {/* QC Affiliation (if role is QA_Liaison) */}
+                {userForm.role === 'QA_Liaison' && (
+                  <div className="sm:col-span-2">
+                    <label className="block font-semibold text-slate-700 mb-1">
+                      Afiliasi Pihak QC Inspector <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={userForm.qc_affiliation}
+                      onChange={(e) => setUserForm(prev => ({ ...prev, qc_affiliation: e.target.value }))}
+                      className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-cyan-500 focus:outline-none"
+                    >
+                      <option value="Arisa">🏢 QC Pihak Arisa (QC1 - Hardware Verification)</option>
+                      <option value="Shopee">🛍️ QC Pihak Shopee (QC2 - Final Handover Release)</option>
+                    </select>
+                  </div>
+                )}
+
                 {/* Branch Placement */}
                 <div>
                   <label className="block font-semibold text-slate-700 mb-1">
@@ -1164,6 +1187,63 @@ const Admin = () => {
                       placeholder="Contoh: Display & Hinges Specialist"
                       className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-cyan-500 focus:outline-none"
                     />
+                  </div>
+                )}
+
+                {/* Embedded Signature Upload Section */}
+                {(userForm.role === 'Coordinator' || userForm.role === 'QA_Liaison' || userForm.role === 'Admin') && (
+                  <div className="sm:col-span-2 space-y-2 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+                    <label className="block text-xs font-bold text-slate-800 flex items-center justify-between">
+                      <span>✍️ Tanda Tangan Digital Pengguna ({userForm.role})</span>
+                      {userForm.signature_url && (
+                        <span className="text-[10px] text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                          TTD Terpasang ✅
+                        </span>
+                      )}
+                    </label>
+
+                    {userForm.signature_url ? (
+                      <div className="bg-white border border-slate-300 rounded-lg p-2 flex items-center justify-between h-20">
+                        <img
+                          src={userForm.signature_url}
+                          alt="Tanda Tangan User"
+                          className="max-h-16 max-w-[200px] object-contain mx-auto"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setUserForm(prev => ({ ...prev, signature_url: '' }))}
+                          className="px-2.5 py-1 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-xs font-bold border border-red-200 flex items-center space-x-1"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Hapus</span>
+                        </button>
+                      </div>
+                    ) : (
+                      <div>
+                        <label className="block w-full border border-dashed border-slate-300 hover:border-cyan-500 rounded-lg p-3 text-center cursor-pointer bg-white hover:bg-cyan-50/40 transition-colors">
+                          <input
+                            type="file"
+                            accept="image/png, image/jpeg, image/webp, image/svg+xml"
+                            onChange={(e) => {
+                              const file = e.target.files[0];
+                              if (!file) return;
+                              if (!file.type.startsWith('image/')) {
+                                alert('Harap pilih file gambar (PNG, JPG, WEBP).');
+                                return;
+                              }
+                              const reader = new FileReader();
+                              reader.onload = (event) => {
+                                setUserForm(prev => ({ ...prev, signature_url: event.target.result }));
+                              };
+                              reader.readAsDataURL(file);
+                            }}
+                            className="hidden"
+                          />
+                          <span className="text-xs font-bold text-cyan-700 block">📁 Klik untuk Upload Gambar TTD (PNG/JPG)</span>
+                          <span className="text-[10px] text-slate-400 block mt-0.5">Format PNG transparan disarankan (Max 2MB)</span>
+                        </label>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -1284,6 +1364,23 @@ const Admin = () => {
                   </select>
                 </div>
 
+                {/* QC Affiliation (if role is QA_Liaison) */}
+                {userForm.role === 'QA_Liaison' && (
+                  <div className="sm:col-span-2">
+                    <label className="block font-semibold text-slate-700 mb-1">
+                      Afiliasi Pihak QC Inspector <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={userForm.qc_affiliation}
+                      onChange={(e) => setUserForm(prev => ({ ...prev, qc_affiliation: e.target.value }))}
+                      className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-cyan-500 focus:outline-none"
+                    >
+                      <option value="Arisa">🏢 QC Pihak Arisa (QC1 - Hardware Verification)</option>
+                      <option value="Shopee">🛍️ QC Pihak Shopee (QC2 - Final Handover Release)</option>
+                    </select>
+                  </div>
+                )}
+
                 {/* Branch Placement */}
                 <div>
                   <label className="block font-semibold text-slate-700 mb-1">
@@ -1318,6 +1415,63 @@ const Admin = () => {
                       <option value="active">🟢 Akun Aktif (Dapat Login)</option>
                       <option value="inactive">🔴 Akun Non-aktif (Blokir Login)</option>
                     </select>
+                  </div>
+                )}
+
+                {/* Embedded Signature Upload Section */}
+                {(userForm.role === 'Coordinator' || userForm.role === 'QA_Liaison' || userForm.role === 'Admin') && (
+                  <div className="sm:col-span-2 space-y-2 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+                    <label className="block text-xs font-bold text-slate-800 flex items-center justify-between">
+                      <span>✍️ Tanda Tangan Digital Pengguna ({userForm.role})</span>
+                      {userForm.signature_url && (
+                        <span className="text-[10px] text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                          TTD Terpasang ✅
+                        </span>
+                      )}
+                    </label>
+
+                    {userForm.signature_url ? (
+                      <div className="bg-white border border-slate-300 rounded-lg p-2 flex items-center justify-between h-20">
+                        <img
+                          src={userForm.signature_url}
+                          alt="Tanda Tangan User"
+                          className="max-h-16 max-w-[200px] object-contain mx-auto"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setUserForm(prev => ({ ...prev, signature_url: '' }))}
+                          className="px-2.5 py-1 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-xs font-bold border border-red-200 flex items-center space-x-1"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Hapus</span>
+                        </button>
+                      </div>
+                    ) : (
+                      <div>
+                        <label className="block w-full border border-dashed border-slate-300 hover:border-cyan-500 rounded-lg p-3 text-center cursor-pointer bg-white hover:bg-cyan-50/40 transition-colors">
+                          <input
+                            type="file"
+                            accept="image/png, image/jpeg, image/webp, image/svg+xml"
+                            onChange={(e) => {
+                              const file = e.target.files[0];
+                              if (!file) return;
+                              if (!file.type.startsWith('image/')) {
+                                alert('Harap pilih file gambar (PNG, JPG, WEBP).');
+                                return;
+                              }
+                              const reader = new FileReader();
+                              reader.onload = (event) => {
+                                setUserForm(prev => ({ ...prev, signature_url: event.target.result }));
+                              };
+                              reader.readAsDataURL(file);
+                            }}
+                            className="hidden"
+                          />
+                          <span className="text-xs font-bold text-cyan-700 block">📁 Klik untuk Upload Gambar TTD (PNG/JPG)</span>
+                          <span className="text-[10px] text-slate-400 block mt-0.5">Format PNG transparan disarankan (Max 2MB)</span>
+                        </label>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

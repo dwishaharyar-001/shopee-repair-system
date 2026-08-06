@@ -212,7 +212,7 @@ const getAllUsers = async (req, res) => {
  */
 const createUser = async (req, res) => {
   try {
-    const { username, password, full_name, email, role, branch_id, skill_level } = req.body;
+    const { username, password, full_name, email, role, branch_id, skill_level, qc_affiliation, signature_url } = req.body;
 
     if (!username || !password || !full_name || !role) {
       return res.status(400).json({
@@ -241,7 +241,9 @@ const createUser = async (req, res) => {
       role,
       branch_id: targetBranchId,
       is_active: true,
-      delete_status: 'none'
+      delete_status: 'none',
+      qc_affiliation: qc_affiliation || 'Arisa',
+      signature_url: signature_url || null
     });
 
     // Auto create Technician profile if role is Technician
@@ -281,7 +283,7 @@ const createUser = async (req, res) => {
 const updateUser = async (req, res) => {
   try {
     const { id } = req.params;
-    const { full_name, email, role, branch_id, password, is_active, skill_level } = req.body;
+    const { full_name, email, role, branch_id, password, is_active, skill_level, qc_affiliation, signature_url } = req.body;
 
     const user = await User.findByPk(id);
     if (!user) {
@@ -299,6 +301,8 @@ const updateUser = async (req, res) => {
     if (full_name) user.full_name = full_name.trim();
     if (email !== undefined) user.email = email ? email.trim() : null;
     if (role) user.role = role;
+    if (qc_affiliation) user.qc_affiliation = qc_affiliation;
+    if (signature_url !== undefined) user.signature_url = signature_url || null;
 
     if (user.role === 'Admin') {
       user.branch_id = null;

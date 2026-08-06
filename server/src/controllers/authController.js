@@ -137,10 +137,15 @@ const uploadSignature = async (req, res) => {
       return res.status(404).json({ success: false, message: 'User tidak ditemukan.' });
     }
 
-    if (user.role !== 'Coordinator' && user.role !== 'Admin') {
+    const isAllowedToUploadSig = 
+      user.role === 'Coordinator' || 
+      user.role === 'Admin' || 
+      user.role === 'QA_Liaison';
+
+    if (!isAllowedToUploadSig) {
       return res.status(403).json({
         success: false,
-        message: 'Akses ditolak. Fitur upload tanda tangan khusus untuk role Coordinator.'
+        message: 'Akses ditolak. Fitur upload tanda tangan khusus untuk role Coordinator dan QC Shopee.'
       });
     }
 
@@ -158,14 +163,14 @@ const uploadSignature = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: signature_url ? 'Tanda tangan Coordinator berhasil disimpan!' : 'Tanda tangan berhasil dihapus.',
+      message: signature_url ? 'Tanda tangan digital berhasil disimpan!' : 'Tanda tangan berhasil dihapus.',
       data: updatedUser
     });
   } catch (error) {
     console.error('Error uploading signature:', error);
     return res.status(500).json({
       success: false,
-      message: 'Gagal menyimpan tanda tangan Coordinator.',
+      message: 'Gagal menyimpan tanda tangan digital.',
       error: error.message
     });
   }

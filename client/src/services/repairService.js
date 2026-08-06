@@ -44,6 +44,18 @@ export const repairService = {
     return response.data;
   },
 
+  // Add Broken Spare Part Record
+  addBrokenPart: async (orderId, data) => {
+    const response = await api.post(`/repairs/orders/${orderId}/broken-parts`, data);
+    return response.data;
+  },
+
+  // Remove Broken Spare Part Record
+  removeBrokenPart: async (brokenPartId) => {
+    const response = await api.delete(`/repairs/broken-parts/${brokenPartId}`);
+    return response.data;
+  },
+
   // Submit to QC1 Arisa
   submitToQC1: async (orderId, action_taken) => {
     const response = await api.post(`/repairs/orders/${orderId}/submit-qc1`, { action_taken });

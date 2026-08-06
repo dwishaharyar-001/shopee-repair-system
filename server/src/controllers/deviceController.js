@@ -215,6 +215,7 @@ const createIntake = async (req, res) => {
       fault_description,
       status: 'Intake',
       assigned_technician_id: assigned_technician_id || null,
+      assigned_tech_at: assigned_technician_id ? new Date() : null,
       received_by_user_id: req.user ? req.user.id : null,
       intake_date: new Date(),
       notes: notes || null
@@ -316,6 +317,79 @@ const getDevices = async (req, res) => {
   }
 };
 
+// 7. Get Real Dashboard Stats from Database
+const getDashboardStats = async (req, res) => {
+  try {
+    const totalDevices = await Device.count();
+    const activeInRepair = await ServiceOrder.count({
+      where: {
+        status: {
+          [Op.in]: ['In Repair', 'Rework', 'QC1 Pending', 'QC2 Pending']
+        }
+      }
+    });
+
+    const totalOrders = await ServiceOrder.count();
+    const releasedOrders = await ServiceOrder.count({
+      where: { status: 'Released' }
+    });
+
+    // QC Pass rate calculation from QCCheckpoint
+    let qcPassRate = '0.0%';
+    try {
+      const { QCCheckpoint } = require('../models');
+      if (QCCheckpoint) {
+        const totalQC = await QCCheckpoint.count();
+        const passedQC = await QCCheckpoint.count({ where: { overall_result: 'Passed' } });
+        if (totalQC > 0) {
+          qcPassRate = `${((passedQC / totalQC) * 100).toFixed(1)}%`;
+        }
+      }
+    } catch (e) {}
+
+    // Recent 5 Service Orders from real DB
+    const recentOrders = await ServiceOrder.findAll({
+      limit: 5,
+      order: [['created_at', 'DESC']],
+      include: [
+        { model: Device, as: 'device' },
+        { model: Customer, as: 'customer' },
+        { model: Branch, as: 'branch' },
+        {
+          model: Technician,
+          as: 'assignedTechnician',
+          include: [{ model: User, as: 'user', attributes: ['id', 'full_name'] }]
+        }
+      ]
+    });
+
+    // Find latest Rework order for SLA timer card if any
+    const reworkOrder = await ServiceOrder.findOne({
+      where: { status: 'Rework' },
+      include: [
+        { model: Device, as: 'device' }
+      ],
+      order: [['updated_at', 'DESC']]
+    });
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        totalDevices,
+        activeInRepair,
+        qcPassRate,
+        releasedOrders,
+        totalOrders,
+        recentOrders,
+        reworkOrder
+      }
+    });
+  } catch (error) {
+    console.error('Error in getDashboardStats:', error);
+    return res.status(500).json({ success: false, message: 'Gagal mengambil statistik dashboard.', error: error.message });
+  }
+};
+
 module.exports = {
   getCustomers,
   createCustomer,
@@ -323,5 +397,6 @@ module.exports = {
   getServiceOrderById,
   createIntake,
   updateServiceOrder,
-  getDevices
+  getDevices,
+  getDashboardStats
 };
