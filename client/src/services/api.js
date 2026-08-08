@@ -8,9 +8,6 @@ const getBaseURL = () => {
     if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
       return 'http://127.0.0.1:3000/api';
     }
-    if (window.location.hostname.includes('vercel.app')) {
-      return 'https://compactly-cargo-catchable.ngrok-free.dev/api';
-    }
   }
   return '/api';
 };
@@ -18,9 +15,7 @@ const getBaseURL = () => {
 const api = axios.create({
   baseURL: getBaseURL(),
   headers: {
-    'Content-Type': 'application/json',
-    'bypass-tunnel-reminder': 'true',
-    'ngrok-skip-browser-warning': 'true'
+    'Content-Type': 'application/json'
   }
 });
 

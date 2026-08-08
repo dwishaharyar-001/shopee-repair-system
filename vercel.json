@@ -4,7 +4,7 @@
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "https://compactly-cargo-catchable.ngrok-free.dev/api/$1"
+      "destination": "/api/index.js"
     },
     {
       "source": "/(.*)",
