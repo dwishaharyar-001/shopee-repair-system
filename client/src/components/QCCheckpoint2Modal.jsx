@@ -67,29 +67,29 @@ const QCCheckpoint2Modal = ({ isOpen, onClose, order, onSuccess }) => {
   ];
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-      <div className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden my-8">
+    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-2.5 sm:p-4 overflow-y-auto">
+      <div className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden my-auto max-h-[92vh] flex flex-col">
         {/* Header */}
-        <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="p-2 bg-purple-600 rounded-xl text-white">
-              <Award className="w-5 h-5" />
+        <div className="bg-slate-900 text-white px-4 sm:px-6 py-3.5 sm:py-4 flex items-center justify-between flex-shrink-0">
+          <div className="flex items-center space-x-2.5 sm:space-x-3">
+            <div className="p-1.5 sm:p-2 bg-purple-600 rounded-xl text-white">
+              <Award className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
             <div>
-              <h3 className="font-bold text-base">Audit QC Checkpoint 2 (Shopee Release)</h3>
-              <p className="text-xs text-slate-400">Verifikasi Akhir Kosmetik, Fungsionalitas & Approval Rilis Asset</p>
+              <h3 className="font-bold text-sm sm:text-base">Audit QC Checkpoint 2 (Shopee Release)</h3>
+              <p className="text-[10px] sm:text-xs text-slate-400">Verifikasi Akhir Kosmetik, Fungsionalitas & Approval Rilis</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
+            className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 sm:space-y-6 overflow-y-auto flex-1 custom-scrollbar">
           {error && (
             <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs flex items-center gap-2">
               <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
@@ -98,36 +98,36 @@ const QCCheckpoint2Modal = ({ isOpen, onClose, order, onSuccess }) => {
           )}
 
           {/* Unit Info Box */}
-          <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 flex justify-between text-xs">
+          <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs">
             <div>
               <span className="font-mono text-purple-600 font-bold">{order.service_id}</span>
               <h4 className="font-bold text-slate-800 text-sm mt-0.5">{order.device?.brand} {order.device?.model}</h4>
               <p className="text-slate-500 font-mono text-[11px]">SN: {order.device?.serial_number}</p>
             </div>
-            <div className="text-right">
-              <span className="text-slate-400">Customer:</span>
+            <div className="sm:text-right border-t sm:border-t-0 pt-1 sm:pt-0">
+              <span className="text-slate-400 text-[10px] uppercase font-semibold">Customer:</span>
               <div className="font-bold text-slate-900">{order.customer?.name}</div>
             </div>
           </div>
 
           {/* Criteria Checklist */}
-          <div className="space-y-3">
-            <h4 className="text-xs font-bold text-slate-600 uppercase tracking-wider">Kriteria Evaluasi Release Shopee</h4>
+          <div className="space-y-2.5">
+            <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Kriteria Evaluasi Release Shopee</h4>
             {testItems.map((item) => (
-              <div key={item.key} className="flex items-center justify-between bg-slate-50 p-3 rounded-xl border border-slate-200/80">
+              <div key={item.key} className="flex flex-col sm:flex-row sm:items-center justify-between bg-slate-50 p-3 rounded-xl border border-slate-200/80 gap-2">
                 <div>
                   <div className="font-semibold text-xs text-slate-800">{item.label}</div>
-                  <div className="text-[11px] text-slate-400">{item.desc}</div>
+                  <div className="text-[11px] text-slate-500 leading-tight">{item.desc}</div>
                 </div>
 
-                <div className="flex items-center space-x-2">
+                <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 pt-1 sm:pt-0">
                   <button
                     type="button"
                     onClick={() => handleTestChange(item.key, 'Pass')}
-                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all flex items-center space-x-1 ${
+                    className={`py-1.5 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center space-x-1 ${
                       tests[item.key] === 'Pass'
-                        ? 'bg-purple-600 text-white shadow-sm'
-                        : 'bg-slate-200 text-slate-600 hover:bg-slate-300'
+                        ? 'bg-purple-600 text-white shadow-sm ring-2 ring-purple-200'
+                        : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100'
                     }`}
                   >
                     <CheckCircle2 className="w-3.5 h-3.5" />
@@ -137,10 +137,10 @@ const QCCheckpoint2Modal = ({ isOpen, onClose, order, onSuccess }) => {
                   <button
                     type="button"
                     onClick={() => handleTestChange(item.key, 'Fail')}
-                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all flex items-center space-x-1 ${
+                    className={`py-1.5 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center space-x-1 ${
                       tests[item.key] === 'Fail'
-                        ? 'bg-red-600 text-white shadow-sm'
-                        : 'bg-slate-200 text-slate-600 hover:bg-slate-300'
+                        ? 'bg-red-600 text-white shadow-sm ring-2 ring-red-200'
+                        : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100'
                     }`}
                   >
                     <XCircle className="w-3.5 h-3.5" />
@@ -152,35 +152,35 @@ const QCCheckpoint2Modal = ({ isOpen, onClose, order, onSuccess }) => {
           </div>
 
           {/* Overall Decision Selector */}
-          <div className="p-4 rounded-xl border border-slate-200 bg-slate-50 space-y-2">
+          <div className="p-3.5 sm:p-4 rounded-xl border border-slate-200 bg-slate-50 space-y-2">
             <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
               Keputusan Final Release Shopee:
             </label>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               <button
                 type="button"
                 onClick={() => setOverallResult('Passed')}
-                className={`py-2.5 rounded-xl font-bold text-xs flex items-center justify-center space-x-2 border transition-all ${
+                className={`py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center space-x-2 border transition-all ${
                   overallResult === 'Passed'
                     ? 'bg-purple-600 text-white border-purple-600 shadow-md ring-2 ring-purple-200'
                     : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
                 }`}
               >
-                <CheckCircle2 className="w-4 h-4" />
-                <span>APPROVE RELEASE (Disetujui Rilis)</span>
+                <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+                <span>APPROVE RELEASE (Disetujui)</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setOverallResult('Rejected')}
-                className={`py-2.5 rounded-xl font-bold text-xs flex items-center justify-center space-x-2 border transition-all ${
+                className={`py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center space-x-2 border transition-all ${
                   overallResult === 'Rejected'
                     ? 'bg-red-600 text-white border-red-600 shadow-md ring-2 ring-red-200'
                     : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
                 }`}
               >
-                <XCircle className="w-4 h-4" />
-                <span>REJECT (Kembalikan Rework 48h)</span>
+                <XCircle className="w-4 h-4 flex-shrink-0" />
+                <span>REJECT (Rework 48h)</span>
               </button>
             </div>
           </div>
@@ -203,18 +203,18 @@ const QCCheckpoint2Modal = ({ isOpen, onClose, order, onSuccess }) => {
           )}
 
           {/* Footer Buttons */}
-          <div className="pt-4 border-t border-slate-100 flex items-center justify-end space-x-3">
+          <div className="pt-3 border-t border-slate-100 flex flex-col-reverse sm:flex-row items-center justify-end gap-2 sm:gap-3">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition-colors"
+              className="w-full sm:w-auto px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition-colors text-center"
             >
               Batal
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-5 py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold rounded-xl shadow-md shadow-purple-600/20 transition-all flex items-center space-x-2 disabled:opacity-50"
+              className="w-full sm:w-auto px-5 py-2.5 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-xl shadow-md shadow-purple-600/20 transition-all flex items-center justify-center space-x-2 disabled:opacity-50"
             >
               {isSubmitting ? (
                 <span>Memproses...</span>
