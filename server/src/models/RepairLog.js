@@ -22,7 +22,7 @@ const RepairLog = sequelize.define('RepairLog', {
   },
   technician_id: {
     type: DataTypes.INTEGER,
-    allowNull: false,
+    allowNull: true,
     references: {
       model: 'technicians',
       key: 'id'
@@ -49,6 +49,10 @@ const RepairLog = sequelize.define('RepairLog', {
     allowNull: true
   },
   duration_minutes: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0
+  },
+  duration_seconds: {
     type: DataTypes.INTEGER,
     defaultValue: 0
   },

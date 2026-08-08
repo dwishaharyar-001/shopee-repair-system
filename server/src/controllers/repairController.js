@@ -148,11 +148,21 @@ const saveDiagnostics = async (req, res) => {
     });
 
     if (!activeLog) {
+      const orderObj = await ServiceOrder.findByPk(id);
+      let resolvedTechId = orderObj ? orderObj.assigned_technician_id : null;
+      if (!resolvedTechId && req.user && req.user.technicianProfile) {
+        resolvedTechId = req.user.technicianProfile.id;
+      }
+      if (!resolvedTechId) {
+        const firstTech = await Technician.findOne();
+        resolvedTechId = firstTech ? firstTech.id : null;
+      }
+
       const logCount = await RepairLog.count();
       activeLog = await RepairLog.create({
         repair_code: generateRepairCode(logCount + 1),
         service_order_id: id,
-        technician_id: req.user && req.user.technicianProfile ? req.user.technicianProfile.id : 1,
+        technician_id: resolvedTechId,
         repair_status: 'In Progress'
       });
     }
