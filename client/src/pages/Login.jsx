@@ -153,28 +153,28 @@ const Login = () => {
                 onClick={() => handleQuickLogin('admin')}
                 className="px-2.5 py-1.5 bg-slate-800/80 hover:bg-slate-800 text-purple-300 rounded-lg border border-slate-700/60 text-left transition-colors truncate"
               >
-                🔑 Admin
+                🔑 Admin (admin)
               </button>
               <button
                 type="button"
                 onClick={() => handleQuickLogin('coordinator1')}
                 className="px-2.5 py-1.5 bg-slate-800/80 hover:bg-slate-800 text-blue-300 rounded-lg border border-slate-700/60 text-left transition-colors truncate"
               >
-                📋 Coordinator
+                📋 Coord (coordinator1)
               </button>
               <button
                 type="button"
-                onClick={() => handleQuickLogin('qa_arisa')}
+                onClick={() => handleQuickLogin('qa_shopee')}
                 className="px-2.5 py-1.5 bg-slate-800/80 hover:bg-slate-800 text-amber-300 rounded-lg border border-slate-700/60 text-left transition-colors truncate"
               >
-                🔍 QA Liaison
+                🔍 QA Shopee (qa_shopee)
               </button>
               <button
                 type="button"
-                onClick={() => handleQuickLogin('tech1')}
+                onClick={() => handleQuickLogin('nova')}
                 className="px-2.5 py-1.5 bg-slate-800/80 hover:bg-slate-800 text-emerald-300 rounded-lg border border-slate-700/60 text-left transition-colors truncate"
               >
-                🛠️ Technician
+                🛠️ Tech (nova)
               </button>
             </div>
             <p className="text-[10px] text-slate-500 text-center mt-2 font-mono">
