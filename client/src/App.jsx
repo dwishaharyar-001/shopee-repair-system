@@ -75,7 +75,7 @@ function App() {
           <Route
             path="/qc"
             element={
-              <ProtectedRoute menuKey="qc" allowedRoles={['Admin', 'Coordinator', 'QA_Liaison', 'Technician']}>
+              <ProtectedRoute menuKey="qc" allowedRoles={['Admin', 'Coordinator', 'QA_Liaison']}>
                 <MainLayout>
                   <QC />
                 </MainLayout>
@@ -97,7 +97,7 @@ function App() {
           <Route
             path="/reports"
             element={
-              <ProtectedRoute menuKey="reports" allowedRoles={['Admin', 'Coordinator', 'QA_Liaison', 'Technician']}>
+              <ProtectedRoute menuKey="reports" allowedRoles={['Admin', 'Coordinator', 'QA_Liaison']}>
                 <MainLayout>
                   <Reports />
                 </MainLayout>
@@ -108,7 +108,7 @@ function App() {
           <Route
             path="/bast-documents"
             element={
-              <ProtectedRoute menuKey="reports" allowedRoles={['Admin', 'Coordinator', 'QA_Liaison', 'Technician']}>
+              <ProtectedRoute menuKey="reports" allowedRoles={['Admin', 'Coordinator', 'QA_Liaison']}>
                 <MainLayout>
                   <BASTDocuments />
                 </MainLayout>

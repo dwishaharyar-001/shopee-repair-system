@@ -245,13 +245,27 @@ const createIntake = async (req, res) => {
   }
 };
 
-// 5. Update Service Order (Status, Assigned Technician, Notes)
+// 5. Update Service Order (Status, Assigned Technician, Notes, & Device Master Details)
 const updateServiceOrder = async (req, res) => {
   try {
     const { id } = req.params;
-    const { status, assigned_technician_id, notes, branch_id } = req.body;
+    const {
+      status,
+      assigned_technician_id,
+      notes,
+      branch_id,
+      customer_id,
+      fault_description,
+      serial_number,
+      brand,
+      model,
+      asset_type
+    } = req.body;
 
-    const order = await ServiceOrder.findByPk(id);
+    const order = await ServiceOrder.findByPk(id, {
+      include: [{ model: Device, as: 'device' }]
+    });
+
     if (!order) {
       return res.status(404).json({ success: false, message: 'Service order tidak ditemukan.' });
     }
@@ -265,10 +279,21 @@ const updateServiceOrder = async (req, res) => {
 
     if (assigned_technician_id !== undefined) {
       order.assigned_technician_id = assigned_technician_id || null;
+      if (assigned_technician_id && !order.assigned_tech_at) {
+        order.assigned_tech_at = new Date();
+      }
     }
 
     if (branch_id !== undefined) {
-      order.branch_id = branch_id || null;
+      order.branch_id = branch_id ? parseInt(branch_id) : null;
+    }
+
+    if (customer_id !== undefined) {
+      order.customer_id = customer_id ? parseInt(customer_id) : null;
+    }
+
+    if (fault_description !== undefined) {
+      order.fault_description = fault_description.trim();
     }
 
     if (notes !== undefined) {
@@ -276,6 +301,35 @@ const updateServiceOrder = async (req, res) => {
     }
 
     await order.save();
+
+    // Update associated Device Master details if provided
+    if (order.device) {
+      let deviceChanged = false;
+      if (serial_number !== undefined && serial_number.trim()) {
+        order.device.serial_number = serial_number.trim();
+        deviceChanged = true;
+      }
+      if (brand !== undefined && brand.trim()) {
+        order.device.brand = brand.trim();
+        deviceChanged = true;
+      }
+      if (model !== undefined && model.trim()) {
+        order.device.model = model.trim();
+        deviceChanged = true;
+      }
+      if (asset_type !== undefined && asset_type) {
+        order.device.asset_type = asset_type;
+        deviceChanged = true;
+      }
+      if (customer_id !== undefined && customer_id) {
+        order.device.customer_id = parseInt(customer_id);
+        deviceChanged = true;
+      }
+
+      if (deviceChanged) {
+        await order.device.save();
+      }
+    }
 
     const updatedOrder = await ServiceOrder.findByPk(id, {
       include: [
@@ -292,10 +346,11 @@ const updateServiceOrder = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: `Service order '${order.service_id}' berhasil diperbarui.`,
+      message: `Data Service Order '${order.service_id}' dan Master Device berhasil diperbarui.`,
       data: updatedOrder
     });
   } catch (error) {
+    console.error('Error in updateServiceOrder:', error);
     return res.status(500).json({ success: false, message: 'Gagal memperbarui service order.', error: error.message });
   }
 };

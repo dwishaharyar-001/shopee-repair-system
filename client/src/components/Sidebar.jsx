@@ -30,7 +30,7 @@ const Sidebar = () => {
     { key: 'dashboard', name: 'Dashboard', path: '/', icon: LayoutDashboard, defaultRoles: ['Admin', 'Coordinator', 'QA_Liaison', 'Technician'] },
     { key: 'devices', name: 'Devices Intake', path: '/devices', icon: Laptop, defaultRoles: ['Admin', 'Coordinator', 'QA_Liaison', 'Technician'] },
     { key: 'repairs', name: 'Repair Queue', path: '/repairs', icon: Wrench, defaultRoles: ['Admin', 'Coordinator', 'Technician'] },
-    { key: 'qc', name: 'QC Checkpoints', path: '/qc', icon: CheckCircle2, defaultRoles: ['Admin', 'Coordinator', 'QA_Liaison', 'Technician'] },
+    { key: 'qc', name: 'QC Checkpoints', path: '/qc', icon: CheckCircle2, defaultRoles: ['Admin', 'Coordinator', 'QA_Liaison'] },
     { key: 'parts', name: 'Parts Inventory', path: '/parts', icon: Package, defaultRoles: ['Admin', 'Coordinator', 'Technician'] },
     { key: 'reports', name: 'KPI Reports & BAST', path: '/reports', icon: FileText, defaultRoles: ['Admin', 'Coordinator', 'QA_Liaison'] },
     { key: 'admin', name: 'Admin & Users', path: '/admin', icon: Users, defaultRoles: ['Admin', 'Coordinator'] },
@@ -39,8 +39,10 @@ const Sidebar = () => {
   // Filter based on dynamic permissions from backend
   const filteredNav = navItems.filter(item => {
     if (!user) return false;
-    if (permissions && permissions.length > 0) {
-      return permissions.includes(item.key) || permissions.includes('reports');
+    // Admin always has full access
+    if (user.role === 'Admin') return true;
+    if (permissions && Array.isArray(permissions)) {
+      return permissions.includes(item.key);
     }
     return item.defaultRoles.includes(user.role);
   });

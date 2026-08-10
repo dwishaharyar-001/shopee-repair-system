@@ -25,7 +25,7 @@ const DEFAULT_PERMISSIONS = [
   { role: 'Admin', menu_key: 'qc', is_allowed: true },
   { role: 'Coordinator', menu_key: 'qc', is_allowed: true },
   { role: 'QA_Liaison', menu_key: 'qc', is_allowed: true },
-  { role: 'Technician', menu_key: 'qc', is_allowed: true },
+  { role: 'Technician', menu_key: 'qc', is_allowed: false },
 
   // Parts Inventory
   { role: 'Admin', menu_key: 'parts', is_allowed: true },
