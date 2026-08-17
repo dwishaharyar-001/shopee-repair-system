@@ -3,7 +3,8 @@ require('dotenv').config();
 
 let sequelize;
 
-const cloudDbUrl = process.env.DATABASE_URL || 'postgresql://postgres.hvfdhrwktiqbkmbdadre:19April24%24%24%23%21@aws-0-ap-northeast-1.pooler.supabase.com:6543/postgres';
+// Supabase Session Pooler (Port 5432 - IPv4 compatible & supports Sequelize prepared statements)
+const cloudDbUrl = process.env.DATABASE_URL || 'postgresql://postgres.hvfdhrwktiqbkmbdadre:19April24%24%24%23%21@aws-0-ap-northeast-1.pooler.supabase.com:5432/postgres';
 
 // Priority 1: Use SQLite ONLY when explicitly running local dev with USE_SQLITE=true on non-Vercel
 if (process.env.USE_SQLITE === 'true' && !process.env.VERCEL) {
