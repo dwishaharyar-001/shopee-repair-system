@@ -20,7 +20,8 @@ export const AuthProvider = ({ children }) => {
     try {
       const res = await api.get('/menu/my-permissions');
       if (res.data && res.data.success) {
-        setPermissions(res.data.data.allowedMenus || []);
+        const allowed = Array.isArray(res.data.data) ? res.data.data : (res.data.data.allowedMenus || []);
+        setPermissions(allowed);
       }
     } catch (err) {
       console.error('Gagal mengambil permission menu:', err);
