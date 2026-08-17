@@ -21,17 +21,22 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization', 'bypass-tunnel-reminder', 'ngrok-skip-browser-warning']
 }));
 
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-
-// Pre-parsed body fallback for Vercel Serverless
+// Safe body parser for Vercel Serverless (Prevents hanging on already-consumed streams)
 app.use((req, res, next) => {
-  if (typeof req.body === 'string' && req.body.length > 0) {
-    try {
-      req.body = JSON.parse(req.body);
-    } catch (e) {}
+  if (req.body !== undefined && req.body !== null) {
+    if (typeof req.body === 'string' && req.body.length > 0) {
+      try {
+        req.body = JSON.parse(req.body);
+      } catch (e) {}
+    }
+    return next();
   }
-  next();
+  express.json({ limit: '10mb' })(req, res, (err) => {
+    if (err) {
+      return res.status(400).json({ success: false, message: 'Invalid JSON payload' });
+    }
+    express.urlencoded({ extended: true, limit: '10mb' })(req, res, next);
+  });
 });
 
 // Health Check
