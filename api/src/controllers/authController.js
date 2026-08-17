@@ -55,22 +55,27 @@ const login = async (req, res) => {
       { expiresIn: '24h' }
     );
 
+    const rawUser = user.toJSON ? user.toJSON() : user;
+    const cleanUser = {
+      id: rawUser.id,
+      username: rawUser.username,
+      full_name: rawUser.full_name,
+      email: rawUser.email,
+      role: rawUser.role,
+      branch_id: rawUser.branch_id,
+      branch: rawUser.branch || null,
+      technician: rawUser.technicianProfile || null,
+      signature_url: rawUser.signature_url || null,
+      delete_status: rawUser.delete_status || 'none',
+      qc_affiliation: rawUser.qc_affiliation || 'Arisa'
+    };
+
     return res.status(200).json({
       success: true,
       message: 'Login berhasil.',
       data: {
         token,
-        user: {
-          id: user.id,
-          username: user.username,
-          full_name: user.full_name,
-          email: user.email,
-          role: user.role,
-          branch_id: user.branch_id,
-          branch: user.branch || null,
-          technician: user.technicianProfile || null,
-          signature_url: user.signature_url || null
-        }
+        user: cleanUser
       }
     });
   } catch (error) {
@@ -93,9 +98,28 @@ const getMe = async (req, res) => {
       ]
     });
 
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User tidak ditemukan.' });
+    }
+
+    const rawUser = user.toJSON ? user.toJSON() : user;
+    const cleanUser = {
+      id: rawUser.id,
+      username: rawUser.username,
+      full_name: rawUser.full_name,
+      email: rawUser.email,
+      role: rawUser.role,
+      branch_id: rawUser.branch_id,
+      branch: rawUser.branch || null,
+      technician: rawUser.technicianProfile || null,
+      signature_url: rawUser.signature_url || null,
+      delete_status: rawUser.delete_status || 'none',
+      qc_affiliation: rawUser.qc_affiliation || 'Arisa'
+    };
+
     return res.status(200).json({
       success: true,
-      data: user
+      data: cleanUser
     });
   } catch (error) {
     return res.status(500).json({
@@ -117,9 +141,26 @@ const getAllUsers = async (req, res) => {
       order: [['created_at', 'DESC']]
     });
 
+    const cleanUsers = users.map(u => {
+      const raw = u.toJSON ? u.toJSON() : u;
+      return {
+        id: raw.id,
+        username: raw.username,
+        full_name: raw.full_name,
+        email: raw.email,
+        role: raw.role,
+        branch_id: raw.branch_id,
+        branch: raw.branch || null,
+        technician: raw.technicianProfile || null,
+        signature_url: raw.signature_url || null,
+        delete_status: raw.delete_status || 'none',
+        qc_affiliation: raw.qc_affiliation || 'Arisa'
+      };
+    });
+
     return res.status(200).json({
       success: true,
-      data: users
+      data: cleanUsers
     });
   } catch (error) {
     return res.status(500).json({
@@ -161,10 +202,25 @@ const uploadSignature = async (req, res) => {
       ]
     });
 
+    const rawUser = updatedUser.toJSON ? updatedUser.toJSON() : updatedUser;
+    const cleanUser = {
+      id: rawUser.id,
+      username: rawUser.username,
+      full_name: rawUser.full_name,
+      email: rawUser.email,
+      role: rawUser.role,
+      branch_id: rawUser.branch_id,
+      branch: rawUser.branch || null,
+      technician: rawUser.technicianProfile || null,
+      signature_url: rawUser.signature_url || null,
+      delete_status: rawUser.delete_status || 'none',
+      qc_affiliation: rawUser.qc_affiliation || 'Arisa'
+    };
+
     return res.status(200).json({
       success: true,
       message: signature_url ? 'Tanda tangan digital berhasil disimpan!' : 'Tanda tangan berhasil dihapus.',
-      data: updatedUser
+      data: cleanUser
     });
   } catch (error) {
     console.error('Error uploading signature:', error);
