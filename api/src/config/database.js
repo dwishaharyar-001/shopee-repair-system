@@ -14,7 +14,7 @@ if (process.env.USE_SQLITE === 'true' && !process.env.VERCEL) {
   });
 } 
 // Priority 2: Supabase PostgreSQL (Cloud Database for Vercel & Production)
-else {
+else if (cloudDbUrl) {
   sequelize = new Sequelize(cloudDbUrl, {
     dialect: 'postgres',
     dialectOptions: {
@@ -32,7 +32,7 @@ else {
     }
   });
 } 
-// Priority 3: Fallback SQLite if no DB_NAME
+// Priority 3: Fallback PostgreSQL from individual env vars
 else {
   const dbHost = process.env.DB_HOST || 'localhost';
   const dbPort = process.env.DB_PORT || 5432;
