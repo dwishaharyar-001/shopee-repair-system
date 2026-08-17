@@ -2,6 +2,15 @@ const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 
+// Process-level crash prevention for Serverless
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error);
+});
+
 const { sequelize, User } = require('./src/models');
 const authRoutes = require('./src/routes/authRoutes');
 const deviceRoutes = require('./src/routes/deviceRoutes');
