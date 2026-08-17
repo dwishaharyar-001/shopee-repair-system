@@ -92,6 +92,23 @@ app.use('/branches', branchRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/reports', reportRoutes);
 
+// Fallback direct root mount for auth routes (e.g. /login, /me)
+app.use('/', authRoutes);
+
+// 404 Unmatched Route Handler
+app.use((req, res) => {
+  return res.status(404).json({
+    success: false,
+    message: `Endpoint '${req.method} ${req.originalUrl || req.url}' tidak ditemukan pada Vercel API.`,
+    debug: {
+      url: req.url,
+      originalUrl: req.originalUrl,
+      baseUrl: req.baseUrl,
+      path: req.path
+    }
+  });
+});
+
 // Global Error Handler
 app.use((err, req, res, next) => {
   console.error('Unhandled Error in Serverless API:', err);
