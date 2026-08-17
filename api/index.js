@@ -24,6 +24,16 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+// Pre-parsed body fallback for Vercel
+app.use((req, res, next) => {
+  if (typeof req.body === 'string' && req.body.length > 0) {
+    try {
+      req.body = JSON.parse(req.body);
+    } catch (e) {}
+  }
+  next();
+});
+
 // Health Check
 app.get(['/api/health', '/health'], (req, res) => {
   res.status(200).json({
@@ -33,6 +43,42 @@ app.get(['/api/health', '/health'], (req, res) => {
     service: 'Shopee Asset Repair Cloud API',
     timestamp: new Date().toISOString()
   });
+});
+
+// Direct Login Test Endpoint (Bypasses Router to verify controller execution)
+app.post(['/api/direct-login', '/direct-login'], async (req, res) => {
+  const bcrypt = require('bcryptjs');
+  const jwt = require('jsonwebtoken');
+  const { User, Technician, Branch } = require('./src/models');
+  try {
+    const { username, password } = req.body || {};
+    if (!username || !password) {
+      return res.status(400).json({ success: false, message: 'Username dan password wajib diisi.' });
+    }
+    const user = await User.findOne({
+      where: { username },
+      include: [
+        { model: Technician, as: 'technicianProfile', required: false },
+        { model: Branch, as: 'branch', required: false }
+      ]
+    });
+    if (!user) {
+      return res.status(401).json({ success: false, message: 'Username tidak ditemukan.' });
+    }
+    const isMatch = await bcrypt.compare(password, user.password_hash);
+    if (!isMatch) {
+      return res.status(401).json({ success: false, message: 'Password salah.' });
+    }
+    const secret = process.env.JWT_SECRET || 'shopee_asset_repair_super_secret_jwt_key_2026';
+    const token = jwt.sign({ id: user.id, username: user.username, role: user.role, branch_id: user.branch_id }, secret, { expiresIn: '24h' });
+    return res.status(200).json({
+      success: true,
+      message: 'Direct login test berhasil!',
+      data: { token, user: { id: user.id, username: user.username, role: user.role } }
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message, stack: err.stack });
+  }
 });
 
 // Database Debug Endpoint for Serverless
