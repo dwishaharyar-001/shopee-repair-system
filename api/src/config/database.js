@@ -21,14 +21,16 @@ else if (cloudDbUrl) {
       ssl: {
         require: true,
         rejectUnauthorized: false
-      }
+      },
+      keepAlive: true
     },
     logging: false,
     pool: {
-      max: 10,
+      max: 2,
       min: 0,
-      acquire: 30000,
-      idle: 10000
+      acquire: 15000,
+      idle: 0,
+      evict: 500
     }
   });
 } 
@@ -52,10 +54,11 @@ else {
     } : {},
     logging: false,
     pool: {
-      max: 10,
+      max: 2,
       min: 0,
-      acquire: 30000,
-      idle: 10000
+      acquire: 15000,
+      idle: 0,
+      evict: 500
     }
   });
 }
