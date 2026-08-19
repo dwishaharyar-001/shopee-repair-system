@@ -71,7 +71,26 @@ const getBranches = async (req, res) => {
       where: { is_active: true },
       order: [['name', 'ASC']]
     });
-    return res.status(200).json({ success: true, data: branches });
+
+    let priceMap = {};
+    try {
+      const customPrices = await BranchCategoryPrice.findAll({
+        where: { category_name: 'General Diagnostics Fee' }
+      });
+      customPrices.forEach(cp => {
+        priceMap[cp.branch_id] = parseFloat(cp.price) || 30000;
+      });
+    } catch (e) {}
+
+    const data = branches.map(b => {
+      const raw = b.toJSON ? b.toJSON() : b;
+      return {
+        ...raw,
+        diagnostic_fee: priceMap[raw.id] !== undefined ? priceMap[raw.id] : 30000
+      };
+    });
+
+    return res.status(200).json({ success: true, data });
   } catch (error) {
     console.error('Error in getBranches:', error);
     return res.status(500).json({ success: false, message: 'Gagal mengambil daftar lokasi cabang.' });
@@ -87,7 +106,26 @@ const getAllBranches = async (req, res) => {
     const branches = await Branch.findAll({
       order: [['id', 'ASC']]
     });
-    return res.status(200).json({ success: true, data: branches });
+
+    let priceMap = {};
+    try {
+      const customPrices = await BranchCategoryPrice.findAll({
+        where: { category_name: 'General Diagnostics Fee' }
+      });
+      customPrices.forEach(cp => {
+        priceMap[cp.branch_id] = parseFloat(cp.price) || 30000;
+      });
+    } catch (e) {}
+
+    const data = branches.map(b => {
+      const raw = b.toJSON ? b.toJSON() : b;
+      return {
+        ...raw,
+        diagnostic_fee: priceMap[raw.id] !== undefined ? priceMap[raw.id] : 30000
+      };
+    });
+
+    return res.status(200).json({ success: true, data });
   } catch (error) {
     console.error('Error in getAllBranches:', error);
     return res.status(500).json({ success: false, message: 'Gagal mengambil data master cabang.' });
@@ -304,26 +342,28 @@ const updateBranchDiagnosticFee = async (req, res) => {
       });
     }
 
-    try {
-      await sequelize.query('ALTER TABLE branches ADD COLUMN IF NOT EXISTS diagnostic_fee INTEGER DEFAULT 30000;');
-    } catch (e) {
-      try {
-        await sequelize.query('ALTER TABLE "branches" ADD COLUMN "diagnostic_fee" INTEGER DEFAULT 30000;');
-      } catch (e2) {}
-    }
-
     const branch = await Branch.findByPk(id);
     if (!branch) {
       return res.status(404).json({ success: false, message: 'Lokasi cabang tidak ditemukan.' });
     }
 
-    branch.diagnostic_fee = parsedFee;
-    await branch.save();
+    // Upsert into BranchCategoryPrice
+    const [catPrice] = await BranchCategoryPrice.findOrCreate({
+      where: { branch_id: id, category_name: 'General Diagnostics Fee' },
+      defaults: { price: parsedFee }
+    });
+    catPrice.price = parsedFee;
+    await catPrice.save();
 
     return res.status(200).json({
       success: true,
       message: `Tarif General Diagnostics untuk cabang '${branch.name}' berhasil diubah menjadi Rp ${parsedFee.toLocaleString('id-ID')}.`,
-      data: branch
+      data: {
+        id: branch.id,
+        name: branch.name,
+        code: branch.code,
+        diagnostic_fee: parsedFee
+      }
     });
   } catch (error) {
     console.error('Error in updateBranchDiagnosticFee:', error);

@@ -1,5 +1,5 @@
 const { Op } = require('sequelize');
-const { sequelize, ServiceOrder, Device, Customer, Technician, User, Branch } = require('../models');
+const { sequelize, ServiceOrder, Device, Customer, Technician, User, Branch, BranchCategoryPrice } = require('../models');
 
 // Status Groups
 const DONE_STATUSES = ['QC Passed', 'Ready for Pickup', 'Released'];
@@ -547,20 +547,25 @@ const getDiagnosticDeviceCountReport = async (req, res) => {
       orderWhere.branch_id = branch_id;
     }
 
-    // Auto-migrate diagnostic_fee column on PostgreSQL/SQLite if not already existing
-    try {
-      await sequelize.query('ALTER TABLE branches ADD COLUMN IF NOT EXISTS diagnostic_fee INTEGER DEFAULT 30000;');
-    } catch (e) {
-      try {
-        await sequelize.query('ALTER TABLE "branches" ADD COLUMN "diagnostic_fee" INTEGER DEFAULT 30000;');
-      } catch (e2) {}
-    }
-
-    // Fetch branches with diagnostic_fee
+    // Fetch branches with standard attributes
     const branches = await Branch.findAll({
       where: { is_active: true },
+      attributes: ['id', 'name', 'code', 'is_active'],
       order: [['name', 'ASC']]
     });
+
+    // Fetch custom diagnostic prices from BranchCategoryPrice
+    let priceByBranch = {};
+    try {
+      const customPrices = await BranchCategoryPrice.findAll({
+        where: { category_name: 'General Diagnostics Fee' }
+      });
+      customPrices.forEach(cp => {
+        priceByBranch[cp.branch_id] = parseFloat(cp.price) || 30000;
+      });
+    } catch (e) {
+      console.warn('BranchCategoryPrice fetch warning:', e.message);
+    }
 
     // Fetch all service orders matching criteria
     const orders = await ServiceOrder.findAll({
@@ -574,7 +579,7 @@ const getDiagnosticDeviceCountReport = async (req, res) => {
         {
           model: Branch,
           as: 'branch',
-          attributes: ['id', 'name', 'code', 'diagnostic_fee']
+          attributes: ['id', 'name', 'code']
         },
         {
           model: Technician,
@@ -592,7 +597,7 @@ const getDiagnosticDeviceCountReport = async (req, res) => {
         branch_id: b.id,
         branch_name: b.name,
         branch_code: b.code,
-        diagnostic_fee: b.diagnostic_fee !== undefined && b.diagnostic_fee !== null ? b.diagnostic_fee : 30000,
+        diagnostic_fee: priceByBranch[b.id] !== undefined ? priceByBranch[b.id] : 30000,
         total_intake: 0,
         total_diagnosed: 0,
         total_pending: 0,
