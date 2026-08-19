@@ -47,10 +47,10 @@ const Login = () => {
         {/* Brand Logo & Header */}
         <div className="text-center mb-8">
           <div className="w-14 h-14 bg-gradient-to-tr from-orange-500 to-amber-400 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-xl shadow-orange-500/25 ring-4 ring-orange-500/10">
-            <span className="font-extrabold text-2xl text-white">S</span>
+            <span className="font-extrabold text-2xl text-white">A</span>
           </div>
           <h1 className="text-2xl font-bold text-white tracking-tight">
-            Shopee Asset Repair
+            ARISA Service System
           </h1>
           <p className="text-xs text-slate-400 mt-1">
             Computer Service System & Inventory Management
@@ -138,7 +138,7 @@ const Login = () => {
 
         {/* Footer */}
         <p className="text-center text-xs text-slate-500 mt-6">
-          &copy; 2026 Shopee Asset Repair Project. Deployed on VPS Indonesia.
+          &copy; 2026 Arisa-SEA  Asset Repair Project. Supported by PT. Data Treasure Indonesia.
         </p>
       </div>
     </div>
