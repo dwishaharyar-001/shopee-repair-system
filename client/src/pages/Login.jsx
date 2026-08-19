@@ -37,13 +37,6 @@ const Login = () => {
     }
   };
 
-  // Quick preset helper for easy login during testing
-  const handleQuickLogin = (presetUser) => {
-    setUsername(presetUser);
-    setPassword('password123');
-    setError('');
-  };
-
   return (
     <div className="min-h-screen bg-slate-950 flex flex-col justify-center items-center p-4 relative overflow-hidden">
       {/* Background Glow Accents */}
@@ -141,46 +134,6 @@ const Login = () => {
               )}
             </button>
           </form>
-
-          {/* Preset Demo Accounts */}
-          <div className="mt-8 pt-6 border-t border-slate-800">
-            <p className="text-[11px] text-slate-400 font-semibold uppercase tracking-wider mb-3 text-center">
-              Akses Cepat Pengujian (Demo Accounts)
-            </p>
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('admin')}
-                className="px-2.5 py-1.5 bg-slate-800/80 hover:bg-slate-800 text-purple-300 rounded-lg border border-slate-700/60 text-left transition-colors truncate"
-              >
-                🔑 Admin (admin)
-              </button>
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('coordinator1')}
-                className="px-2.5 py-1.5 bg-slate-800/80 hover:bg-slate-800 text-blue-300 rounded-lg border border-slate-700/60 text-left transition-colors truncate"
-              >
-                📋 Coord (coordinator1)
-              </button>
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('qa_shopee')}
-                className="px-2.5 py-1.5 bg-slate-800/80 hover:bg-slate-800 text-amber-300 rounded-lg border border-slate-700/60 text-left transition-colors truncate"
-              >
-                🔍 QA Shopee (qa_shopee)
-              </button>
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('nova')}
-                className="px-2.5 py-1.5 bg-slate-800/80 hover:bg-slate-800 text-emerald-300 rounded-lg border border-slate-700/60 text-left transition-colors truncate"
-              >
-                🛠️ Tech (nova)
-              </button>
-            </div>
-            <p className="text-[10px] text-slate-500 text-center mt-2 font-mono">
-              Default password: password123
-            </p>
-          </div>
         </div>
 
         {/* Footer */}
