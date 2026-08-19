@@ -1,8 +1,11 @@
 const express = require('express');
 const cors = require('cors');
+const bcrypt = require('bcryptjs');
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '../../.env') });
 require('dotenv').config();
 
-const { sequelize } = require('./models');
+const { sequelize, User, Technician, Branch } = require('./models');
 const authRoutes = require('./routes/authRoutes');
 const deviceRoutes = require('./routes/deviceRoutes');
 const repairRoutes = require('./routes/repairRoutes');
@@ -11,6 +14,9 @@ const partsRoutes = require('./routes/partsRoutes');
 const menuRoutes = require('./routes/menuRoutes');
 const branchRoutes = require('./routes/branchRoutes');
 const reportRoutes = require('./routes/reportRoutes');
+
+const { ensureDefaultBranches } = require('./controllers/branchController');
+const { ensureDefaultPermissions } = require('./controllers/menuController');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -26,10 +32,10 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // API Health check
-app.get('/api/health', (req, res) => {
+app.get(['/api/health', '/health'], (req, res) => {
   res.status(200).json({
     status: 'online',
-    service: 'Shopee Asset Repair System Backend',
+    service: 'ARISA Service System Backend (VPS)',
     timestamp: new Date().toISOString()
   });
 });
@@ -44,17 +50,125 @@ app.use('/api/menu', menuRoutes);
 app.use('/api/branches', branchRoutes);
 app.use('/api/reports', reportRoutes);
 
+// Fallback direct routes
+app.use('/auth', authRoutes);
+
 // Global Error Handler
 app.use((err, req, res, next) => {
-  console.error('Unhandled Error:', err);
+  console.error('Unhandled Error in Backend API:', err);
   res.status(err.status || 500).json({
     success: false,
     message: err.message || 'Internal Server Error'
   });
 });
 
-const { ensureDefaultBranches } = require('./controllers/branchController');
-const { ensureDefaultPermissions } = require('./controllers/menuController');
+/**
+ * Auto-Seed Default Users if DB is fresh
+ */
+const ensureDefaultUsers = async () => {
+  try {
+    const userCount = await User.count();
+    if (userCount === 0) {
+      console.log('Seeding default system users...');
+      const passwordHash = await bcrypt.hash('password123', 10);
+      
+      const defaultBranch = await Branch.findOne();
+      const branchId = defaultBranch ? defaultBranch.id : 1;
+
+      // 1. Admin
+      await User.create({
+        username: 'admin',
+        password_hash: passwordHash,
+        full_name: 'System Administrator',
+        email: 'admin@shopee-repair.local',
+        role: 'Admin',
+        branch_id: branchId,
+        is_active: true
+      });
+
+      // 2. Coordinators
+      await User.create({
+        username: 'coordinator1',
+        password_hash: passwordHash,
+        full_name: 'Coordinator Hub Jakarta',
+        email: 'coordinator1@shopee-repair.local',
+        role: 'Coordinator',
+        branch_id: branchId,
+        is_active: true
+      });
+
+      await User.create({
+        username: 'coordinator2',
+        password_hash: passwordHash,
+        full_name: 'Coordinator Hub Bandung',
+        email: 'coordinator2@shopee-repair.local',
+        role: 'Coordinator',
+        branch_id: branchId,
+        is_active: true
+      });
+
+      // 3. QA Liaisons
+      await User.create({
+        username: 'qa_shopee',
+        password_hash: passwordHash,
+        full_name: 'Rian Hidayat (QA Shopee)',
+        email: 'rian.qa@shopee-repair.local',
+        role: 'QA_Liaison',
+        is_active: true
+      });
+
+      await User.create({
+        username: 'qa_arisa',
+        password_hash: passwordHash,
+        full_name: 'Dewi Lestari (QA Arisa)',
+        email: 'dewi.qa@shopee-repair.local',
+        role: 'QA_Liaison',
+        is_active: true
+      });
+
+      // 4. Default Technicians
+      const techUser = await User.create({
+        username: 'nova',
+        password_hash: passwordHash,
+        full_name: 'Nova Pratama',
+        email: 'nova.tech@shopee-repair.local',
+        role: 'Technician',
+        branch_id: branchId,
+        is_active: true
+      });
+
+      await Technician.create({
+        user_id: techUser.id,
+        employee_code: 'TECH-009',
+        skill_level: 'Senior',
+        status: 'Available'
+      });
+
+      for (let i = 1; i <= 8; i++) {
+        const u = await User.create({
+          username: `tech${i}`,
+          password_hash: passwordHash,
+          full_name: `Technician ${i}`,
+          email: `tech${i}@shopee-repair.local`,
+          role: 'Technician',
+          branch_id: branchId,
+          is_active: true
+        });
+
+        await Technician.create({
+          user_id: u.id,
+          employee_code: `TECH-00${i}`,
+          skill_level: 'Standard',
+          status: 'Available'
+        });
+      }
+
+      console.log('✅ Default users seeded successfully with password: password123');
+    }
+  } catch (err) {
+    console.error('Error ensuring default users:', err.message);
+  }
+};
 
 // Database Sync & Server Listen
 const startServer = async () => {
@@ -63,24 +177,12 @@ const startServer = async () => {
     console.log('✅ Koneksi database berhasil terhubung.');
     
     await sequelize.sync();
-    try {
-      await sequelize.query('ALTER TABLE repair_logs ADD COLUMN duration_seconds INTEGER DEFAULT 0;');
-    } catch (e) {}
-    try {
-      await sequelize.query('ALTER TABLE repair_logs ADD COLUMN diagnostics_outcome TEXT;');
-    } catch (e) {}
-    try {
-      await sequelize.query('ALTER TABLE repair_logs ADD COLUMN repair_categories TEXT;');
-    } catch (e) {}
-    try {
-      await sequelize.query('ALTER TABLE users ADD COLUMN signature_url TEXT;');
-    } catch (e) {}
-    try {
-      await sequelize.query("ALTER TABLE users ADD COLUMN delete_status VARCHAR(20) DEFAULT 'none';");
-    } catch (e) {}
-    try {
-      await sequelize.query("ALTER TABLE users ADD COLUMN qc_affiliation VARCHAR(20) DEFAULT 'Arisa';");
-    } catch (e) {}
+    try { await sequelize.query('ALTER TABLE repair_logs ADD COLUMN duration_seconds INTEGER DEFAULT 0;'); } catch (e) {}
+    try { await sequelize.query('ALTER TABLE repair_logs ADD COLUMN diagnostics_outcome TEXT;'); } catch (e) {}
+    try { await sequelize.query('ALTER TABLE repair_logs ADD COLUMN repair_categories TEXT;'); } catch (e) {}
+    try { await sequelize.query('ALTER TABLE users ADD COLUMN signature_url TEXT;'); } catch (e) {}
+    try { await sequelize.query("ALTER TABLE users ADD COLUMN delete_status VARCHAR(20) DEFAULT 'none';"); } catch (e) {}
+    try { await sequelize.query("ALTER TABLE users ADD COLUMN qc_affiliation VARCHAR(20) DEFAULT 'Arisa';"); } catch (e) {}
     try { await sequelize.query('ALTER TABLE service_orders ADD COLUMN assigned_tech_at DATETIME;'); } catch (e) {}
     try { await sequelize.query('ALTER TABLE service_orders ADD COLUMN repair_started_at DATETIME;'); } catch (e) {}
     try { await sequelize.query('ALTER TABLE service_orders ADD COLUMN repair_finished_at DATETIME;'); } catch (e) {}
@@ -88,13 +190,15 @@ const startServer = async () => {
     try { await sequelize.query('ALTER TABLE service_orders ADD COLUMN qc1_finished_at DATETIME;'); } catch (e) {}
     try { await sequelize.query('ALTER TABLE service_orders ADD COLUMN qc2_started_at DATETIME;'); } catch (e) {}
     try { await sequelize.query('ALTER TABLE service_orders ADD COLUMN qc2_finished_at DATETIME;'); } catch (e) {}
+    try { await sequelize.query('ALTER TABLE branches ADD COLUMN diagnostic_fee INTEGER DEFAULT 30000;'); } catch (e) {}
     console.log('✅ Skema tabel Sequelize berhasil di-sync.');
 
     await ensureDefaultBranches();
     await ensureDefaultPermissions();
+    await ensureDefaultUsers();
 
-    app.listen(PORT, '127.0.0.1', () => {
-      console.log(`🚀 Server Shopee Repair API berjalan di http://127.0.0.1:${PORT}`);
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`🚀 Server Shopee Repair API berjalan di port ${PORT}`);
     });
   } catch (error) {
     console.error('❌ Gagal menyalakan server:', error.message);

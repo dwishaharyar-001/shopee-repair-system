@@ -1,18 +1,15 @@
 const { Sequelize } = require('sequelize');
+const path = require('path');
+
+// Auto load .env from server root or workspace root
+require('dotenv').config({ path: path.join(__dirname, '../../../.env') });
+require('dotenv').config({ path: path.join(__dirname, '../../.env') });
 require('dotenv').config();
 
 let sequelize;
 
-// Priority 1: Use SQLite for Local Development if USE_SQLITE=true
-if (process.env.USE_SQLITE === 'true') {
-  sequelize = new Sequelize({
-    dialect: 'sqlite',
-    storage: './shopee_repair_dev.sqlite',
-    logging: false
-  });
-} 
-// Priority 2: Supabase / Render / Railway Direct Connection String (DATABASE_URL)
-else if (process.env.DATABASE_URL) {
+// Priority 1: PostgreSQL via DATABASE_URL (e.g. Supabase, Render, Railway, Neon, AWS RDS)
+if (process.env.DATABASE_URL) {
   sequelize = new Sequelize(process.env.DATABASE_URL, {
     dialect: 'postgres',
     dialectOptions: {
@@ -30,24 +27,13 @@ else if (process.env.DATABASE_URL) {
     }
   });
 } 
-// Priority 3: Fallback SQLite if no DB_NAME
-else {
-  const dbHost = process.env.DB_HOST || 'localhost';
-  const dbPort = process.env.DB_PORT || 5432;
-  const dbName = process.env.DB_NAME || 'shopee_repair';
-  const dbUser = process.env.DB_USER || 'postgres';
-  const dbPassword = process.env.DB_PASSWORD || 'postgres';
-
-  sequelize = new Sequelize(dbName, dbUser, dbPassword, {
-    host: dbHost,
-    port: dbPort,
+// Priority 2: Custom PostgreSQL individual environment variables (if DB_NAME or DB_HOST explicitly configured)
+else if (process.env.DB_HOST && process.env.DB_USER && process.env.DB_PASSWORD) {
+  sequelize = new Sequelize(process.env.DB_NAME || 'shopee_repair', process.env.DB_USER, process.env.DB_PASSWORD, {
+    host: process.env.DB_HOST,
+    port: process.env.DB_PORT || 5432,
     dialect: 'postgres',
-    dialectOptions: (process.env.DB_SSL === 'true' || dbHost.includes('supabase')) ? {
-      ssl: {
-        require: true,
-        rejectUnauthorized: false
-      }
-    } : {},
+    dialectOptions: process.env.DB_SSL === 'true' ? { ssl: { require: true, rejectUnauthorized: false } } : {},
     logging: false,
     pool: {
       max: 10,
@@ -55,6 +41,15 @@ else {
       acquire: 30000,
       idle: 10000
     }
+  });
+}
+// Priority 3: Self-contained SQLite Database (Production VPS default fallback if no external PostgreSQL provided)
+else {
+  const sqliteStoragePath = process.env.SQLITE_PATH || path.join(__dirname, '../../shopee_repair.sqlite');
+  sequelize = new Sequelize({
+    dialect: 'sqlite',
+    storage: sqliteStoragePath,
+    logging: false
   });
 }
 

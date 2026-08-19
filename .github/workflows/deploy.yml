@@ -1,9 +1,9 @@
-name: Auto Deploy to DomaiNesia VPS
+name: Auto Deploy to VPS
 
 on:
   push:
     branches:
-      - main # Ubah ke 'master' jika default branch repo Anda adalah master
+      - main
 
 jobs:
   deploy:
@@ -19,8 +19,10 @@ jobs:
           port: 22
           script: |
             cd /var/www/shopee-repair-system
-            git pull origin main # Sesuaikan jika branch master
+            git pull origin main
             npm install
-            npm run build
-            pm2 restart shopee-repair-api
-            echo "✅ Auto deploy sukses dijalankan!"
+            cd server && npm install && cd ..
+            cd client && npm install && npm run build && cd ..
+            pm2 restart shopee-repair-api || pm2 start server/src/index.js --name shopee-repair-api
+            pm2 save
+            echo "✅ Auto deploy VPS sukses dijalankan!"

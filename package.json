@@ -1,11 +1,13 @@
 {
-  "name": "shopee-repair-system-cloud",
+  "name": "shopee-repair-system",
   "version": "1.0.0",
-  "description": "Shopee Repair System with Vercel Serverless API and Supabase Cloud Database",
-  "main": "api/index.js",
+  "description": "ARISA Service System & Shopee Computer Repair System",
+  "main": "server/src/index.js",
   "scripts": {
     "build": "cd client && npm install && npm run build",
-    "start": "node server/src/index.js"
+    "start": "node server/src/index.js",
+    "server": "cd server && npm start",
+    "client": "cd client && npm run dev"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
