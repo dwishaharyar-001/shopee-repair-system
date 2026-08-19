@@ -71,7 +71,7 @@ const ensureDefaultUsers = async () => {
     const defaultBranch = await Branch.findOne();
     const branchId = defaultBranch ? defaultBranch.id : 1;
 
-    // Always ensure admin account is available with password123
+    // Ensure default admin account exists only if not already created
     const adminUser = await User.findOne({ where: { username: 'admin' } });
     if (!adminUser) {
       await User.create({
@@ -83,12 +83,7 @@ const ensureDefaultUsers = async () => {
         branch_id: branchId,
         is_active: true
       });
-      console.log('✅ Admin user created.');
-    } else {
-      adminUser.password_hash = passwordHash;
-      adminUser.is_active = true;
-      await adminUser.save();
-      console.log('✅ Admin user verified & password synchronized.');
+      console.log('✅ Default admin user created.');
     }
 
     const userCount = await User.count();
