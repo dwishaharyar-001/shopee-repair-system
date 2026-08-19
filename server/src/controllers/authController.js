@@ -2,6 +2,8 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { User, Technician, Branch } = require('../models');
 
+const branchAttributes = ['id', 'name', 'code', 'address', 'is_active'];
+
 const login = async (req, res) => {
   try {
     const { username, password } = req.body || {};
@@ -17,7 +19,7 @@ const login = async (req, res) => {
       where: { username },
       include: [
         { model: Technician, as: 'technicianProfile', required: false },
-        { model: Branch, as: 'branch', required: false }
+        { model: Branch, as: 'branch', required: false, attributes: branchAttributes }
       ]
     });
 
@@ -94,7 +96,7 @@ const getMe = async (req, res) => {
       attributes: { exclude: ['password_hash'] },
       include: [
         { model: Technician, as: 'technicianProfile', required: false },
-        { model: Branch, as: 'branch', required: false }
+        { model: Branch, as: 'branch', required: false, attributes: branchAttributes }
       ]
     });
 
@@ -136,7 +138,7 @@ const getAllUsers = async (req, res) => {
       attributes: { exclude: ['password_hash'] },
       include: [
         { model: Technician, as: 'technicianProfile', required: false },
-        { model: Branch, as: 'branch', required: false }
+        { model: Branch, as: 'branch', required: false, attributes: branchAttributes }
       ],
       order: [['created_at', 'DESC']]
     });
@@ -198,7 +200,7 @@ const uploadSignature = async (req, res) => {
       attributes: { exclude: ['password_hash'] },
       include: [
         { model: Technician, as: 'technicianProfile', required: false },
-        { model: Branch, as: 'branch', required: false }
+        { model: Branch, as: 'branch', required: false, attributes: branchAttributes }
       ]
     });
 
