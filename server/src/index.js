@@ -67,15 +67,13 @@ app.use((err, req, res, next) => {
  */
 const ensureDefaultUsers = async () => {
   try {
-    const userCount = await User.count();
-    if (userCount === 0) {
-      console.log('Seeding default system users...');
-      const passwordHash = await bcrypt.hash('password123', 10);
-      
-      const defaultBranch = await Branch.findOne();
-      const branchId = defaultBranch ? defaultBranch.id : 1;
+    const passwordHash = await bcrypt.hash('password123', 10);
+    const defaultBranch = await Branch.findOne();
+    const branchId = defaultBranch ? defaultBranch.id : 1;
 
-      // 1. Admin
+    // Always ensure admin account is available with password123
+    const adminUser = await User.findOne({ where: { username: 'admin' } });
+    if (!adminUser) {
       await User.create({
         username: 'admin',
         password_hash: passwordHash,
@@ -85,6 +83,17 @@ const ensureDefaultUsers = async () => {
         branch_id: branchId,
         is_active: true
       });
+      console.log('✅ Admin user created.');
+    } else {
+      adminUser.password_hash = passwordHash;
+      adminUser.is_active = true;
+      await adminUser.save();
+      console.log('✅ Admin user verified & password synchronized.');
+    }
+
+    const userCount = await User.count();
+    if (userCount <= 1) {
+      console.log('Seeding remaining default system users...');
 
       // 2. Coordinators
       await User.create({
