@@ -19,7 +19,8 @@ jobs:
           port: 22
           script: |
             cd /var/www/shopee-repair-system
-            git pull origin main
+            git fetch origin main
+            git reset --hard origin/main
             npm install
             cd server && npm install && cd ..
             cd client && npm install && npm run build && cd ..
