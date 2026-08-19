@@ -1,5 +1,5 @@
 const { Op } = require('sequelize');
-const { ServiceOrder, Device, Customer, Technician, User, Branch } = require('../models');
+const { sequelize, ServiceOrder, Device, Customer, Technician, User, Branch } = require('../models');
 
 // Status Groups
 const DONE_STATUSES = ['QC Passed', 'Ready for Pickup', 'Released'];
@@ -545,6 +545,15 @@ const getDiagnosticDeviceCountReport = async (req, res) => {
     let orderWhere = { ...dateWhere };
     if (branch_id) {
       orderWhere.branch_id = branch_id;
+    }
+
+    // Auto-migrate diagnostic_fee column on PostgreSQL/SQLite if not already existing
+    try {
+      await sequelize.query('ALTER TABLE branches ADD COLUMN IF NOT EXISTS diagnostic_fee INTEGER DEFAULT 30000;');
+    } catch (e) {
+      try {
+        await sequelize.query('ALTER TABLE "branches" ADD COLUMN "diagnostic_fee" INTEGER DEFAULT 30000;');
+      } catch (e2) {}
     }
 
     // Fetch branches with diagnostic_fee

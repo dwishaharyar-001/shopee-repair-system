@@ -1,4 +1,4 @@
-const { Branch, BranchCategoryPrice } = require('../models');
+const { sequelize, Branch, BranchCategoryPrice } = require('../models');
 
 const DEFAULT_REPAIR_CATEGORIES = [
   { name: 'General Diagnostics Fee', price: 50000 },
@@ -302,6 +302,14 @@ const updateBranchDiagnosticFee = async (req, res) => {
         success: false,
         message: 'Nominal tarif diagnostic fee harus berupa angka positif.'
       });
+    }
+
+    try {
+      await sequelize.query('ALTER TABLE branches ADD COLUMN IF NOT EXISTS diagnostic_fee INTEGER DEFAULT 30000;');
+    } catch (e) {
+      try {
+        await sequelize.query('ALTER TABLE "branches" ADD COLUMN "diagnostic_fee" INTEGER DEFAULT 30000;');
+      } catch (e2) {}
     }
 
     const branch = await Branch.findByPk(id);
