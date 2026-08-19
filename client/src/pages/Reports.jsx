@@ -21,7 +21,6 @@ import {
   Printer
 } from 'lucide-react';
 import BASTDocumentModal from '../components/BASTDocumentModal';
-import OfficialBASTModal from '../components/OfficialBASTModal';
 
 const Reports = () => {
   const [activeTab, setActiveTab] = useState('technicians'); // 'technicians' | 'devices'
@@ -31,9 +30,6 @@ const Reports = () => {
   // BAST Modal State
   const [selectedBASTOrderId, setSelectedBASTOrderId] = useState(null);
   const [isBASTModalOpen, setIsBASTModalOpen] = useState(false);
-
-  // Official 3 BAST PDF Certificates Modal State
-  const [isOfficialBASTModalOpen, setIsOfficialBASTModalOpen] = useState(false);
 
   // 1. Technician Report State
   const [techReport, setTechReport] = useState({
@@ -211,15 +207,6 @@ const Reports = () => {
 
         {/* Global Branch Filter, Export Excel & Refresh */}
         <div className="flex flex-wrap items-center gap-3">
-          <button
-            onClick={() => setIsOfficialBASTModalOpen(true)}
-            className="px-4 py-2.5 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center space-x-1.5"
-            title="Cetak Dokumen BAST Akumulasi Harian / Pekanan (Shopee ➔ Arisa, Arisa ➔ Shopee, Used Parts)"
-          >
-            <Printer className="w-4 h-4" />
-            <span>📄 Cetak BAST Resmi (3 PDF Handover)</span>
-          </button>
-
           <button
             onClick={handleExportCSV}
             className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center space-x-1.5"
@@ -597,12 +584,6 @@ const Reports = () => {
           setSelectedBASTOrderId(null);
         }}
         orderId={selectedBASTOrderId}
-      />
-
-      {/* Official 3 BAST Certificates Modal (Harian / Pekanan Akumulasi) */}
-      <OfficialBASTModal
-        isOpen={isOfficialBASTModalOpen}
-        onClose={() => setIsOfficialBASTModalOpen(false)}
       />
     </div>
   );
