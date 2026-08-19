@@ -10,6 +10,7 @@ import {
   Users, 
   FileText, 
   Printer, 
+  Calculator,
   ChevronRight,
   ChevronLeft,
   Menu,
@@ -47,7 +48,7 @@ const Sidebar = () => {
     return item.defaultRoles.includes(user.role);
   });
 
-  const isReportsActive = location.pathname.startsWith('/reports') || location.pathname.startsWith('/bast-documents');
+  const isReportsActive = location.pathname.startsWith('/reports') || location.pathname.startsWith('/bast-documents') || location.pathname.startsWith('/diagnostic-count');
 
   return (
     <>
@@ -162,7 +163,7 @@ const Sidebar = () => {
                   )}
                 </NavLink>
 
-                {/* Submenu "Dokumen BAST Handover" only appears when "KPI Reports & BAST" is active/clicked */}
+                {/* Submenu under "KPI Reports & BAST" only appears when active/clicked */}
                 {item.key === 'reports' && isReportsActive && (!isCollapsed || isMobileOpen) && (
                   <div className="pl-6 pr-1 py-1 space-y-1 border-l-2 border-orange-500/40 ml-4 my-1">
                     <NavLink
@@ -179,6 +180,24 @@ const Sidebar = () => {
                       <Printer className="w-3.5 h-3.5 text-orange-400 flex-shrink-0" />
                       <span className="truncate">Dokumen BAST Handover</span>
                     </NavLink>
+
+                    {/* Submenu "Diagnostic Device Count" - STRICT ADMIN ONLY */}
+                    {user?.role === 'Admin' && (
+                      <NavLink
+                        to="/diagnostic-count"
+                        onClick={closeMobileSidebar}
+                        className={({ isActive }) =>
+                          `flex items-center space-x-2.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all ${
+                            location.pathname === '/diagnostic-count'
+                              ? 'bg-cyan-500/20 text-cyan-300 font-bold border border-cyan-500/40 shadow-xs'
+                              : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/50'
+                          }`
+                        }
+                      >
+                        <Calculator className="w-3.5 h-3.5 text-cyan-400 flex-shrink-0" />
+                        <span className="truncate">Diagnostic Device Count</span>
+                      </NavLink>
+                    )}
                   </div>
                 )}
               </React.Fragment>

@@ -23,6 +23,11 @@ const Branch = sequelize.define('Branch', {
   is_active: {
     type: DataTypes.BOOLEAN,
     defaultValue: true
+  },
+  diagnostic_fee: {
+    type: DataTypes.INTEGER,
+    defaultValue: 30000,
+    allowNull: false
   }
 }, {
   tableName: 'branches',

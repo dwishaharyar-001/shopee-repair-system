@@ -288,6 +288,45 @@ const updateBranchCategoryPrices = async (req, res) => {
   }
 };
 
+/**
+ * Update Branch Diagnostic Fee (Admin only)
+ */
+const updateBranchDiagnosticFee = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { diagnostic_fee } = req.body;
+
+    const parsedFee = parseInt(diagnostic_fee, 10);
+    if (isNaN(parsedFee) || parsedFee < 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Nominal tarif diagnostic fee harus berupa angka positif.'
+      });
+    }
+
+    const branch = await Branch.findByPk(id);
+    if (!branch) {
+      return res.status(404).json({ success: false, message: 'Lokasi cabang tidak ditemukan.' });
+    }
+
+    branch.diagnostic_fee = parsedFee;
+    await branch.save();
+
+    return res.status(200).json({
+      success: true,
+      message: `Tarif General Diagnostics untuk cabang '${branch.name}' berhasil diubah menjadi Rp ${parsedFee.toLocaleString('id-ID')}.`,
+      data: branch
+    });
+  } catch (error) {
+    console.error('Error in updateBranchDiagnosticFee:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Gagal memperbarui tarif diagnostik cabang.',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   getBranches,
   getAllBranches,
@@ -296,5 +335,6 @@ module.exports = {
   deleteBranch,
   getBranchCategoryPrices,
   updateBranchCategoryPrices,
+  updateBranchDiagnosticFee,
   ensureDefaultBranches
 };

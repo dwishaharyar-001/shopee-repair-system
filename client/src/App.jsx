@@ -13,6 +13,7 @@ import QC from './pages/QC';
 import Parts from './pages/Parts';
 import Reports from './pages/Reports';
 import BASTDocuments from './pages/BASTDocuments';
+import DiagnosticCount from './pages/DiagnosticCount';
 import Admin from './pages/Admin';
 
 const MainLayout = ({ children }) => {
@@ -111,6 +112,17 @@ function App() {
               <ProtectedRoute menuKey="reports" allowedRoles={['Admin', 'Coordinator', 'QA_Liaison']}>
                 <MainLayout>
                   <BASTDocuments />
+                </MainLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/diagnostic-count"
+            element={
+              <ProtectedRoute menuKey="reports" allowedRoles={['Admin']}>
+                <MainLayout>
+                  <DiagnosticCount />
                 </MainLayout>
               </ProtectedRoute>
             }

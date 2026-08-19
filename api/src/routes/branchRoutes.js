@@ -8,7 +8,8 @@ const {
   updateBranch,
   deleteBranch,
   getBranchCategoryPrices,
-  updateBranchCategoryPrices
+  updateBranchCategoryPrices,
+  updateBranchDiagnosticFee
 } = require('../controllers/branchController');
 
 // All branch routes require authentication
@@ -28,5 +29,8 @@ router.get('/admin', requireRole('Admin', 'Coordinator'), getAllBranches);
 router.post('/', requireRole('Admin'), createBranch);
 router.put('/:id', requireRole('Admin'), updateBranch);
 router.delete('/:id', requireRole('Admin'), deleteBranch);
+
+// Admin Diagnostic Fee adjustment per branch (STRICT ADMIN ONLY)
+router.put('/:id/diagnostic-fee', requireRole('Admin'), updateBranchDiagnosticFee);
 
 module.exports = router;

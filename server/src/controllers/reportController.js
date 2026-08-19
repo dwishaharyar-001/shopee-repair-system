@@ -508,15 +508,174 @@ const getUsedSparePartsWeeklyBASTReport = async (req, res) => {
     return res.status(200).json({
       success: true,
       data: {
-        startDate: start.toISOString().slice(0, 10),
-        endDate: end.toISOString().slice(0, 10),
-        total_parts: items.length,
         items
       }
     });
   } catch (error) {
     console.error('Error in getUsedSparePartsWeeklyBASTReport:', error);
     return res.status(500).json({ success: false, message: 'Gagal mengambil data BAST Used Spare Parts Pekanan.', error: error.message });
+  }
+};
+
+/**
+ * Diagnostic Device Count & Billing Calculator (Admin Only)
+ * Acuan Penagihan Fee dari PT Data Treasure Indonesia (DTI) ke PT Arisa
+ * 1 device intake yang melewati fase General Diagnostics di-charge Rp 30.000 (dapat disesuaikan per cabang)
+ */
+const getDiagnosticDeviceCountReport = async (req, res) => {
+  try {
+    const { startDate, endDate, branch_id } = req.query;
+
+    let dateWhere = {};
+    if (startDate && endDate) {
+      const start = new Date(startDate);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+
+      dateWhere = {
+        [Op.or]: [
+          { repair_started_at: { [Op.between]: [start, end] } },
+          { intake_date: { [Op.between]: [start, end] } },
+          { created_at: { [Op.between]: [start, end] } }
+        ]
+      };
+    }
+
+    let orderWhere = { ...dateWhere };
+    if (branch_id) {
+      orderWhere.branch_id = branch_id;
+    }
+
+    // Fetch branches with diagnostic_fee
+    const branches = await Branch.findAll({
+      where: { is_active: true },
+      order: [['name', 'ASC']]
+    });
+
+    // Fetch all service orders matching criteria
+    const orders = await ServiceOrder.findAll({
+      where: orderWhere,
+      include: [
+        {
+          model: Device,
+          as: 'device',
+          attributes: ['id', 'device_id', 'brand', 'model', 'serial_number', 'asset_type']
+        },
+        {
+          model: Branch,
+          as: 'branch',
+          attributes: ['id', 'name', 'code', 'diagnostic_fee']
+        },
+        {
+          model: Technician,
+          as: 'assignedTechnician',
+          include: [{ model: User, as: 'user', attributes: ['id', 'full_name', 'username'] }]
+        }
+      ],
+      order: [['created_at', 'DESC']]
+    });
+
+    // Map branches into lookup map
+    const branchMap = {};
+    branches.forEach(b => {
+      branchMap[b.id] = {
+        branch_id: b.id,
+        branch_name: b.name,
+        branch_code: b.code,
+        diagnostic_fee: b.diagnostic_fee !== undefined && b.diagnostic_fee !== null ? b.diagnostic_fee : 30000,
+        total_intake: 0,
+        total_diagnosed: 0,
+        total_pending: 0,
+        total_billing: 0
+      };
+    });
+
+    // Include unknown/no-branch fallback
+    branchMap[0] = {
+      branch_id: 0,
+      branch_name: 'Pusat / Unassigned',
+      branch_code: 'HQ',
+      diagnostic_fee: 30000,
+      total_intake: 0,
+      total_diagnosed: 0,
+      total_pending: 0,
+      total_billing: 0
+    };
+
+    const detailedDevices = [];
+
+    orders.forEach(order => {
+      const bId = order.branch_id && branchMap[order.branch_id] ? order.branch_id : 0;
+      const branchInfo = branchMap[bId];
+      const feePerUnit = branchInfo.diagnostic_fee || 30000;
+
+      // Status check: General Diagnostics is completed if repair_started_at is set OR status != 'Intake'
+      const isDiagnosed = Boolean(
+        order.repair_started_at || 
+        ['In Repair', 'QC1 Pending', 'Rework', 'QC2 Pending', 'Released', 'Harvested'].includes(order.status)
+      );
+
+      branchInfo.total_intake += 1;
+      if (isDiagnosed) {
+        branchInfo.total_diagnosed += 1;
+        branchInfo.total_billing += feePerUnit;
+      } else {
+        branchInfo.total_pending += 1;
+      }
+
+      detailedDevices.push({
+        id: order.id,
+        service_id: order.service_id,
+        device_brand: order.device ? order.device.brand : '-',
+        device_model: order.device ? order.device.model : '-',
+        serial_number: order.device ? order.device.serial_number : '-',
+        asset_type: order.device ? order.device.asset_type : '-',
+        branch_id: bId,
+        branch_name: branchInfo.branch_name,
+        branch_code: branchInfo.branch_code,
+        technician_name: order.assignedTechnician && order.assignedTechnician.user ? order.assignedTechnician.user.full_name : 'Belum Ditugaskan',
+        diagnostic_date: order.repair_started_at || (isDiagnosed ? order.intake_date : null),
+        intake_date: order.intake_date || order.created_at,
+        status: order.status,
+        is_diagnosed: isDiagnosed,
+        fee_amount: isDiagnosed ? feePerUnit : 0
+      });
+    });
+
+    const branchBreakdown = Object.values(branchMap).filter(b => b.branch_id !== 0 || b.total_intake > 0);
+
+    const totalIntakeAll = branchBreakdown.reduce((acc, b) => acc + b.total_intake, 0);
+    const totalDiagnosedAll = branchBreakdown.reduce((acc, b) => acc + b.total_diagnosed, 0);
+    const totalPendingAll = branchBreakdown.reduce((acc, b) => acc + b.total_pending, 0);
+    const totalBillingAll = branchBreakdown.reduce((acc, b) => acc + b.total_billing, 0);
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        filter: {
+          startDate: startDate || null,
+          endDate: endDate || null,
+          branch_id: branch_id || null
+        },
+        summary: {
+          total_intake: totalIntakeAll,
+          total_diagnosed: totalDiagnosedAll,
+          total_pending: totalPendingAll,
+          total_billing_amount: totalBillingAll,
+          default_rate: 30000
+        },
+        branch_breakdown: branchBreakdown,
+        devices: detailedDevices
+      }
+    });
+  } catch (error) {
+    console.error('Error in getDiagnosticDeviceCountReport:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Gagal menghitung jumlah perangkat diagnostik.',
+      error: error.message
+    });
   }
 };
 
@@ -527,5 +686,6 @@ module.exports = {
   exportKPICSV,
   getIntakeDailyBASTReport,
   getCompletedWeeklyBASTReport,
-  getUsedSparePartsWeeklyBASTReport
+  getUsedSparePartsWeeklyBASTReport,
+  getDiagnosticDeviceCountReport
 };

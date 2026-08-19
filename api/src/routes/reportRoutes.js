@@ -8,7 +8,8 @@ const {
   exportKPICSV,
   getIntakeDailyBASTReport,
   getCompletedWeeklyBASTReport,
-  getUsedSparePartsWeeklyBASTReport
+  getUsedSparePartsWeeklyBASTReport,
+  getDiagnosticDeviceCountReport
 } = require('../controllers/reportController');
 
 // All routes require authentication
@@ -30,5 +31,8 @@ router.get('/bast-report/used-parts-weekly', requireRole('Admin', 'Coordinator',
 
 // 5. Export KPI Data Excel (CSV) with full timestamps
 router.get('/export-csv', requireRole('Admin', 'Coordinator', 'QA_Liaison', 'Technician'), exportKPICSV);
+
+// 6. Diagnostic Device Count & Billing Calculator (STRICT ADMIN ONLY)
+router.get('/diagnostic-count', requireRole('Admin'), getDiagnosticDeviceCountReport);
 
 module.exports = router;
