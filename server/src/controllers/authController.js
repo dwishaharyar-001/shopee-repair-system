@@ -67,6 +67,8 @@ const login = async (req, res) => {
       branch_id: rawUser.branch_id,
       branch: rawUser.branch || null,
       technician: rawUser.technicianProfile || null,
+      technicianProfile: rawUser.technicianProfile || null,
+      is_active: rawUser.is_active !== undefined ? rawUser.is_active : true,
       signature_url: rawUser.signature_url || null,
       delete_status: rawUser.delete_status || 'none',
       qc_affiliation: rawUser.qc_affiliation || 'Arisa'
@@ -116,6 +118,7 @@ const getMe = async (req, res) => {
       branch: rawUser.branch || null,
       technician: techProfile,
       technicianProfile: techProfile,
+      is_active: rawUser.is_active !== undefined ? rawUser.is_active : true,
       signature_url: rawUser.signature_url || null,
       delete_status: rawUser.delete_status || 'none',
       qc_affiliation: rawUser.qc_affiliation || 'Arisa'
@@ -158,6 +161,7 @@ const getAllUsers = async (req, res) => {
         branch: raw.branch || null,
         technician: techProfile,
         technicianProfile: techProfile,
+        is_active: raw.is_active !== undefined ? raw.is_active : true,
         signature_url: raw.signature_url || null,
         delete_status: raw.delete_status || 'none',
         qc_affiliation: raw.qc_affiliation || 'Arisa'
