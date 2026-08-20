@@ -195,6 +195,7 @@ const startServer = async () => {
     try { await sequelize.query('ALTER TABLE service_orders ADD COLUMN qc2_started_at DATETIME;'); } catch (e) {}
     try { await sequelize.query('ALTER TABLE service_orders ADD COLUMN qc2_finished_at DATETIME;'); } catch (e) {}
     try { await sequelize.query('ALTER TABLE branches ADD COLUMN diagnostic_fee INTEGER DEFAULT 30000;'); } catch (e) {}
+    try { await sequelize.query("UPDATE users SET is_active = false WHERE role = 'Technician' AND (branch_id IS NULL OR branch_id = 0);"); } catch (e) {}
     console.log('✅ Skema tabel Sequelize berhasil di-sync.');
 
     await ensureDefaultBranches();

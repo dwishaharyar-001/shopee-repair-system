@@ -307,6 +307,11 @@ const Admin = () => {
       return;
     }
 
+    if (userForm.role === 'Technician' && !userForm.branch_id) {
+      setUserFormError('Teknisi tidak bisa bersifat general. Teknisi WAJIB ditugaskan ke salah satu cabang khusus (Dedicated Cabang).');
+      return;
+    }
+
     setUserSubmitting(true);
     try {
       const res = await api.post('/menu/users', userForm);
@@ -329,6 +334,11 @@ const Admin = () => {
     if (!editingUser) return;
     if (!userForm.full_name || !userForm.role) {
       setUserFormError('Nama Lengkap dan Role wajib diisi.');
+      return;
+    }
+
+    if (userForm.role === 'Technician' && !userForm.branch_id) {
+      setUserFormError('Teknisi tidak bisa bersifat general. Teknisi WAJIB ditugaskan ke salah satu cabang khusus (Dedicated Cabang).');
       return;
     }
 
@@ -853,6 +863,11 @@ const Admin = () => {
                               <MapPin className="w-3.5 h-3.5 text-orange-500" />
                               <span>[{u.branch.code}] {u.branch.name}</span>
                             </span>
+                          ) : u.role === 'Technician' ? (
+                            <span className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold">
+                              <AlertCircle className="w-3.5 h-3.5 text-rose-500" />
+                              <span>⚠️ Belum Ada Cabang</span>
+                            </span>
                           ) : (
                             <span className="text-slate-400 text-xs italic">Semua Cabang / Global</span>
                           )}
@@ -867,6 +882,11 @@ const Admin = () => {
                             <span className="inline-flex items-center space-x-1.5 text-xs text-amber-800 font-extrabold bg-amber-100 px-2.5 py-1 rounded-md border border-amber-300 animate-pulse">
                               <AlertCircle className="w-4 h-4 text-amber-600" />
                               <span>⚠️ Pending Delete (Menunggu Approval)</span>
+                            </span>
+                          ) : u.role === 'Technician' && !u.branch ? (
+                            <span className="inline-flex items-center space-x-1.5 text-xs text-rose-600 font-bold bg-rose-50 px-2.5 py-1 rounded-md border border-rose-200" title="Teknisi wajib di-assign ke cabang khusus agar aktif">
+                              <UserX className="w-4 h-4 text-rose-500" />
+                              <span>Non-aktif (Wajib Cabang)</span>
                             </span>
                           ) : u.is_active ? (
                             <span className="inline-flex items-center space-x-1.5 text-xs text-emerald-600 font-medium">
@@ -1157,7 +1177,7 @@ const Admin = () => {
                 {/* Branch Placement */}
                 <div>
                   <label className="block font-semibold text-slate-700 mb-1">
-                    Cabang Bertugas
+                    Cabang Bertugas {userForm.role === 'Technician' && <span className="text-red-500">* (Wajib Dedicated Cabang)</span>}
                   </label>
                   <select
                     value={userForm.branch_id}
@@ -1165,7 +1185,11 @@ const Admin = () => {
                     onChange={(e) => setUserForm(prev => ({ ...prev, branch_id: e.target.value }))}
                     className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-cyan-500 focus:outline-none disabled:opacity-50"
                   >
-                    <option value="">🏢 Seluruh Cabang (Hak Akses Global)</option>
+                    <option value="">
+                      {userForm.role === 'Technician'
+                        ? '-- Pilih Cabang Penugasan (Wajib Dedicated Cabang) --'
+                        : '🏢 Seluruh Cabang (Hak Akses Global)'}
+                    </option>
                     {branches.map(b => (
                       <option key={b.id} value={b.id}>
                         📍 [{b.code}] {b.name}
@@ -1384,7 +1408,7 @@ const Admin = () => {
                 {/* Branch Placement */}
                 <div>
                   <label className="block font-semibold text-slate-700 mb-1">
-                    Cabang Bertugas
+                    Cabang Bertugas {userForm.role === 'Technician' && <span className="text-red-500">* (Wajib Dedicated Cabang)</span>}
                   </label>
                   <select
                     value={userForm.branch_id}
@@ -1392,7 +1416,11 @@ const Admin = () => {
                     onChange={(e) => setUserForm(prev => ({ ...prev, branch_id: e.target.value }))}
                     className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-cyan-500 focus:outline-none disabled:opacity-50"
                   >
-                    <option value="">🏢 Seluruh Cabang (Hak Akses Global)</option>
+                    <option value="">
+                      {userForm.role === 'Technician'
+                        ? '-- Pilih Cabang Penugasan (Wajib Dedicated Cabang) --'
+                        : '🏢 Seluruh Cabang (Hak Akses Global)'}
+                    </option>
                     {branches.map(b => (
                       <option key={b.id} value={b.id}>
                         📍 [{b.code}] {b.name}

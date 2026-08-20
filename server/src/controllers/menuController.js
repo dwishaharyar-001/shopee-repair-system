@@ -221,6 +221,13 @@ const createUser = async (req, res) => {
       });
     }
 
+    if (role === 'Technician' && !branch_id) {
+      return res.status(400).json({
+        success: false,
+        message: 'Teknisi tidak bisa bersifat general. Teknisi WAJIB memilih salah satu cabang khusus (Dedicated Cabang).'
+      });
+    }
+
     const formattedUsername = username.trim().toLowerCase();
     const existing = await User.findOne({ where: { username: formattedUsername } });
     if (existing) {
@@ -310,7 +317,10 @@ const updateUser = async (req, res) => {
       user.branch_id = branch_id ? parseInt(branch_id) : null;
     }
 
-    if (typeof is_active === 'boolean' && user.role !== 'Admin') {
+    // Technicians cannot be general; if unassigned to a branch, status MUST be inactive
+    if (user.role === 'Technician' && !user.branch_id) {
+      user.is_active = false;
+    } else if (typeof is_active === 'boolean' && user.role !== 'Admin') {
       user.is_active = is_active;
     }
 
