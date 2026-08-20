@@ -164,96 +164,69 @@ const Dashboard = () => {
         })}
       </div>
 
-      {/* Main Grid Section: Recent Queue & Quick Activity */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Antrean Perbaikan Perangkat (Real Table View from DB) */}
-        <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6">
-          <div className="flex items-center justify-between mb-5">
-            <div>
-              <h2 className="font-bold text-slate-800 text-base">Antrean Perbaikan Terbaru</h2>
-              <p className="text-xs text-slate-400">Monitoring status pengerjaan perangkat riil dari database</p>
-            </div>
-            <a href="/repairs" className="text-xs font-semibold text-cyan-600 hover:text-cyan-700 flex items-center gap-1">
-              <span>Lihat Semua Queue</span>
-              <ArrowUpRight className="w-3.5 h-3.5" />
-            </a>
+      {/* Main Section: Recent Queue Table */}
+      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6">
+        <div className="flex items-center justify-between mb-5">
+          <div>
+            <h2 className="font-bold text-slate-800 text-base">Antrean Perbaikan Terbaru</h2>
+            <p className="text-xs text-slate-400">Monitoring status pengerjaan perangkat riil dari database</p>
           </div>
+          <a href="/repairs" className="text-xs font-semibold text-cyan-600 hover:text-cyan-700 flex items-center gap-1">
+            <span>Lihat Semua Queue</span>
+            <ArrowUpRight className="w-3.5 h-3.5" />
+          </a>
+        </div>
 
-          {isLoading ? (
-            <div className="p-8 text-center text-slate-400 text-xs">
-              <div className="w-6 h-6 border-3 border-cyan-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
-              <span>Memuat antrean terbaru...</span>
-            </div>
-          ) : stats.recentOrders.length === 0 ? (
-            <div className="p-10 text-center text-slate-400 space-y-2 border border-dashed border-slate-200 rounded-xl">
-              <Laptop className="w-8 h-8 mx-auto text-slate-300" />
-              <p className="font-semibold text-slate-600 text-xs">Belum ada antrean perbaikan di database.</p>
-              <p className="text-[11px] text-slate-400">Gunakan tombol 'Intake Perangkat Baru' untuk mendaftarkan perangkat pertama.</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead>
-                  <tr className="border-b border-slate-100 text-slate-400 uppercase font-semibold">
-                    <th className="py-3 px-2">Service ID</th>
-                    <th className="py-3 px-2">Brand & Model</th>
-                    <th className="py-3 px-2">Teknisi</th>
-                    <th className="py-3 px-2">Status</th>
-                    <th className="py-3 px-2 text-right">Tanggal Intake</th>
+        {isLoading ? (
+          <div className="p-8 text-center text-slate-400 text-xs">
+            <div className="w-6 h-6 border-3 border-cyan-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+            <span>Memuat antrean terbaru...</span>
+          </div>
+        ) : stats.recentOrders.length === 0 ? (
+          <div className="p-10 text-center text-slate-400 space-y-2 border border-dashed border-slate-200 rounded-xl">
+            <Laptop className="w-8 h-8 mx-auto text-slate-300" />
+            <p className="font-semibold text-slate-600 text-xs">Belum ada antrean perbaikan di database.</p>
+            <p className="text-[11px] text-slate-400">Gunakan tombol 'Intake Perangkat Baru' untuk mendaftarkan perangkat pertama.</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead>
+                <tr className="border-b border-slate-100 text-slate-400 uppercase font-semibold">
+                  <th className="py-3 px-2">Service ID</th>
+                  <th className="py-3 px-2">Brand & Model</th>
+                  <th className="py-3 px-2">Teknisi</th>
+                  <th className="py-3 px-2">Status</th>
+                  <th className="py-3 px-2 text-right">Tanggal Intake</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {stats.recentOrders.map((row) => (
+                  <tr key={row.id} className="hover:bg-slate-50/80 transition-colors">
+                    <td className="py-3 px-2 font-semibold text-slate-800">
+                      <div>{row.service_id}</div>
+                      <div className="text-[10px] font-mono text-slate-400 font-normal">SN: {row.device?.serial_number || '-'}</div>
+                    </td>
+                    <td className="py-3 px-2 text-slate-700 font-medium">
+                      {row.device ? `${row.device.brand} ${row.device.model}` : '-'}
+                    </td>
+                    <td className="py-3 px-2 font-medium text-emerald-700">
+                      {row.assignedTechnician?.user?.full_name || 'Unassigned'}
+                    </td>
+                    <td className="py-3 px-2">
+                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border ${getStatusBadge(row.status)}`}>
+                        {row.status}
+                      </span>
+                    </td>
+                    <td className="py-3 px-2 text-right text-slate-400 font-mono text-[11px]">
+                      {new Date(row.intake_date || row.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
+                    </td>
                   </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {stats.recentOrders.map((row) => (
-                    <tr key={row.id} className="hover:bg-slate-50/80 transition-colors">
-                      <td className="py-3 px-2 font-semibold text-slate-800">
-                        <div>{row.service_id}</div>
-                        <div className="text-[10px] font-mono text-slate-400 font-normal">SN: {row.device?.serial_number || '-'}</div>
-                      </td>
-                      <td className="py-3 px-2 text-slate-700 font-medium">
-                        {row.device ? `${row.device.brand} ${row.device.model}` : '-'}
-                      </td>
-                      <td className="py-3 px-2 font-medium text-emerald-700">
-                        {row.assignedTechnician?.user?.full_name || 'Unassigned'}
-                      </td>
-                      <td className="py-3 px-2">
-                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border ${getStatusBadge(row.status)}`}>
-                          {row.status}
-                        </span>
-                      </td>
-                      <td className="py-3 px-2 text-right text-slate-400 font-mono text-[11px]">
-                        {new Date(row.intake_date || row.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-
-        {/* Right Column Panel */}
-        <div className="space-y-6">
-          {/* Quick System Info Card (ONLY visible for System Administrator) */}
-          {user?.role === 'Admin' && (
-            <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 space-y-4">
-              <h3 className="font-bold text-slate-800 text-sm">Status Database & Server System</h3>
-              <div className="space-y-3 text-xs">
-                <div className="flex justify-between items-center py-1.5 border-b border-slate-100">
-                  <span className="text-slate-500">Node.js Express API</span>
-                  <span className="text-emerald-600 font-bold flex items-center gap-1">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500"></span> Port 3000
-                  </span>
-                </div>
-                <div className="flex justify-between items-center py-1.5 border-b border-slate-100">
-                  <span className="text-slate-500">Database Connection</span>
-                  <span className="text-emerald-600 font-bold flex items-center gap-1">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500"></span> SQLite Active
-                  </span>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* Device Intake Modal */}
