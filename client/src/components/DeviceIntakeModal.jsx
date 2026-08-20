@@ -74,7 +74,7 @@ const DeviceIntakeModal = ({ isOpen, onClose, onSuccess }) => {
       const usersRes = await api.get('/auth/users');
       if (usersRes.data && usersRes.data.success) {
         const techList = usersRes.data.data
-          .filter(u => u.role === 'Technician' && (u.technicianProfile || u.technician))
+          .filter(u => u.role === 'Technician' && u.is_active && u.branch_id && (u.technicianProfile || u.technician))
           .map(u => {
             const prof = u.technicianProfile || u.technician || {};
             return {
@@ -413,15 +413,14 @@ const DeviceIntakeModal = ({ isOpen, onClose, onSuccess }) => {
               >
                 <option value="">-- Pilih Teknisi (Atau Biarkan Unassigned) --</option>
                 {technicians
-                  .filter(t => !formData.branch_id || !t.branch_id || String(t.branch_id) === String(formData.branch_id))
+                  .filter(t => t.is_active && t.branch_id && String(t.branch_id) === String(formData.branch_id))
                   .map(t => {
                     const prof = t.technicianProfile || t.technician || {};
                     const skill = prof.skill_level ? ` - ${prof.skill_level}` : '';
                     const empCode = prof.employee_code || `TECH-${String(t.id).padStart(3, '0')}`;
-                    const branchCode = t.branch ? `[${t.branch.code}]` : '';
                     return (
                       <option key={prof.id || t.id} value={prof.id || t.id}>
-                        🛠️ {t.full_name} ({empCode}{skill}) {branchCode}
+                        🛠️ {t.full_name} ({empCode}{skill})
                       </option>
                     );
                   })}
