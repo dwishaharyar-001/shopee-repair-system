@@ -105,6 +105,7 @@ const getMe = async (req, res) => {
     }
 
     const rawUser = user.toJSON ? user.toJSON() : user;
+    const techProfile = rawUser.technicianProfile || rawUser.technician || null;
     const cleanUser = {
       id: rawUser.id,
       username: rawUser.username,
@@ -113,7 +114,8 @@ const getMe = async (req, res) => {
       role: rawUser.role,
       branch_id: rawUser.branch_id,
       branch: rawUser.branch || null,
-      technician: rawUser.technicianProfile || null,
+      technician: techProfile,
+      technicianProfile: techProfile,
       signature_url: rawUser.signature_url || null,
       delete_status: rawUser.delete_status || 'none',
       qc_affiliation: rawUser.qc_affiliation || 'Arisa'
@@ -145,6 +147,7 @@ const getAllUsers = async (req, res) => {
 
     const cleanUsers = users.map(u => {
       const raw = u.toJSON ? u.toJSON() : u;
+      const techProfile = raw.technicianProfile || raw.technician || null;
       return {
         id: raw.id,
         username: raw.username,
@@ -153,7 +156,8 @@ const getAllUsers = async (req, res) => {
         role: raw.role,
         branch_id: raw.branch_id,
         branch: raw.branch || null,
-        technician: raw.technicianProfile || null,
+        technician: techProfile,
+        technicianProfile: techProfile,
         signature_url: raw.signature_url || null,
         delete_status: raw.delete_status || 'none',
         qc_affiliation: raw.qc_affiliation || 'Arisa'

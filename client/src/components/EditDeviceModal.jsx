@@ -52,7 +52,16 @@ const EditDeviceModal = ({ isOpen, onClose, order, onSuccess }) => {
 
       const usersRes = await api.get('/auth/users');
       if (usersRes.data && usersRes.data.success) {
-        const techList = usersRes.data.data.filter(u => u.role === 'Technician' && u.technicianProfile);
+        const techList = usersRes.data.data
+          .filter(u => u.role === 'Technician' && (u.technicianProfile || u.technician))
+          .map(u => {
+            const prof = u.technicianProfile || u.technician || {};
+            return {
+              ...u,
+              technicianProfile: prof,
+              technician: prof
+            };
+          });
         setTechnicians(techList);
       }
     } catch (err) {
@@ -275,11 +284,19 @@ const EditDeviceModal = ({ isOpen, onClose, order, onSuccess }) => {
                 className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-medium text-slate-800 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
               >
                 <option value="">-- Belum Ditugaskan (Unassigned) --</option>
-                {technicians.map(t => (
-                  <option key={t.technicianProfile.id} value={t.technicianProfile.id}>
-                    🛠️ {t.full_name} ({t.technicianProfile.employee_code} - {t.technicianProfile.skill_level}) {t.branch ? `[${t.branch.code}]` : ''}
-                  </option>
-                ))}
+                {technicians
+                  .filter(t => !formData.branch_id || !t.branch_id || String(t.branch_id) === String(formData.branch_id))
+                  .map(t => {
+                    const prof = t.technicianProfile || t.technician || {};
+                    const skill = prof.skill_level ? ` - ${prof.skill_level}` : '';
+                    const empCode = prof.employee_code || `TECH-${String(t.id).padStart(3, '0')}`;
+                    const branchCode = t.branch ? `[${t.branch.code}]` : '';
+                    return (
+                      <option key={prof.id || t.id} value={prof.id || t.id}>
+                        🛠️ {t.full_name} ({empCode}{skill}) {branchCode}
+                      </option>
+                    );
+                  })}
               </select>
             </div>
 
