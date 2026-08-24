@@ -33,16 +33,23 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Interceptor Response: Handle error 401 (token expired/invalid)
+// Interceptor Response: Handle error 401 & 502/503 network gateway errors
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response && error.response.status === 401) {
-      // Hapus token dan redirect ke login jika sesi hangus
       localStorage.removeItem('shopee_repair_token');
       localStorage.removeItem('shopee_repair_user');
       if (window.location.pathname !== '/login') {
         window.location.href = '/login';
+      }
+    } else if (!error.response || (error.response.status >= 500 && error.response.status <= 504)) {
+      if (!error.response?.data?.message) {
+        if (!error.response) {
+          error.message = 'Gagal terhubung ke jaringan server. Silakan periksa koneksi internet Anda.';
+        } else {
+          error.message = 'Server backend sedang dalam pemulihan otomatis. Silakan coba kembali dalam beberapa detik.';
+        }
       }
     }
     return Promise.reject(error);

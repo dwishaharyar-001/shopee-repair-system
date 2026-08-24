@@ -5,6 +5,15 @@ const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '../../.env') });
 require('dotenv').config();
 
+// Process-Level Exception Protection to prevent Node process termination
+process.on('uncaughtException', (err) => {
+  console.error('🛡️ Process Protection - Uncaught Exception Caught:', err.stack || err);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('🛡️ Process Protection - Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
 const { sequelize, User, Technician, Branch } = require('./models');
 const authRoutes = require('./routes/authRoutes');
 const deviceRoutes = require('./routes/deviceRoutes');

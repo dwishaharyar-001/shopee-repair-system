@@ -24,6 +24,6 @@ jobs:
             npm install
             cd server && npm install && cd ..
             cd client && npm install && npm run build && cd ..
-            pm2 restart shopee-repair-api || pm2 start server/src/index.js --name shopee-repair-api
+            pm2 startOrReload ecosystem.config.js --env production || pm2 restart shopee-repair-api || pm2 start server/src/index.js --name shopee-repair-api
             pm2 save
             echo "✅ Auto deploy VPS sukses dijalankan!"
