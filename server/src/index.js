@@ -180,50 +180,60 @@ const ensureDefaultUsers = async () => {
   }
 };
 
-// Database Sync & Server Listen
-const startServer = async () => {
+// Start Express HTTP Server FIRST so port 3000 is immediately open for Nginx
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 Server ARISA Service System Backend berjalan di port ${PORT}`);
+});
+
+// Database Sync & Async Initialization
+const initDatabase = async () => {
   try {
     await sequelize.authenticate();
     console.log('✅ Koneksi database berhasil terhubung.');
     
     await sequelize.sync();
-    try { await sequelize.query('ALTER TABLE repair_logs ADD COLUMN duration_seconds INTEGER DEFAULT 0;'); } catch (e) {}
-    try { await sequelize.query('ALTER TABLE repair_logs ADD COLUMN diagnostics_outcome TEXT;'); } catch (e) {}
-    try { await sequelize.query('ALTER TABLE repair_logs ADD COLUMN repair_categories TEXT;'); } catch (e) {}
-    try { await sequelize.query('ALTER TABLE users ADD COLUMN signature_url TEXT;'); } catch (e) {}
-    try { await sequelize.query("ALTER TABLE users ADD COLUMN delete_status VARCHAR(20) DEFAULT 'none';"); } catch (e) {}
-    try { await sequelize.query("ALTER TABLE users ADD COLUMN qc_affiliation VARCHAR(20) DEFAULT 'Arisa';"); } catch (e) {}
-    try { await sequelize.query('ALTER TABLE service_orders ADD COLUMN assigned_tech_at DATETIME;'); } catch (e) {}
-    try { await sequelize.query('ALTER TABLE service_orders ADD COLUMN repair_started_at DATETIME;'); } catch (e) {}
-    try { await sequelize.query('ALTER TABLE service_orders ADD COLUMN repair_finished_at DATETIME;'); } catch (e) {}
-    try { await sequelize.query('ALTER TABLE service_orders ADD COLUMN qc1_started_at DATETIME;'); } catch (e) {}
-    try { await sequelize.query('ALTER TABLE service_orders ADD COLUMN qc1_finished_at DATETIME;'); } catch (e) {}
-    try { await sequelize.query('ALTER TABLE service_orders ADD COLUMN qc2_started_at DATETIME;'); } catch (e) {}
-    try { await sequelize.query('ALTER TABLE service_orders ADD COLUMN qc2_finished_at DATETIME;'); } catch (e) {}
-    try { await sequelize.query("ALTER TABLE service_orders ADD COLUMN bast_status VARCHAR(50) DEFAULT 'Pending_BAST';"); } catch (e) {}
-    try { await sequelize.query("ALTER TABLE service_orders ADD COLUMN sea_approval_decision VARCHAR(50);"); } catch (e) {}
-    try { await sequelize.query('ALTER TABLE service_orders ADD COLUMN diagnostic_started_at DATETIME;'); } catch (e) {}
-    try { await sequelize.query('ALTER TABLE service_orders ADD COLUMN diagnostic_submitted_at DATETIME;'); } catch (e) {}
-    try { await sequelize.query('ALTER TABLE service_orders ADD COLUMN budget_approved_at DATETIME;'); } catch (e) {}
-    try { await sequelize.query('ALTER TABLE service_orders ADD COLUMN budget_approved_by_user_id INTEGER;'); } catch (e) {}
-    try { await sequelize.query('ALTER TABLE service_orders ADD COLUMN estimated_part_cost DECIMAL(12,2) DEFAULT 0;'); } catch (e) {}
-    try { await sequelize.query('ALTER TABLE service_orders ADD COLUMN estimated_service_cost DECIMAL(12,2) DEFAULT 0;'); } catch (e) {}
-    try { await sequelize.query('ALTER TABLE service_orders ADD COLUMN total_estimated_cost DECIMAL(12,2) DEFAULT 0;'); } catch (e) {}
-    try { await sequelize.query('ALTER TABLE service_orders ADD COLUMN harvest_reason TEXT;'); } catch (e) {}
-    try { await sequelize.query('ALTER TABLE branches ADD COLUMN diagnostic_fee INTEGER DEFAULT 30000;'); } catch (e) {}
-    try { await sequelize.query("UPDATE users SET is_active = false WHERE role = 'Technician' AND (branch_id IS NULL OR branch_id = 0);"); } catch (e) {}
+
+    // Migration queries safe execution
+    const safeQueries = [
+      'ALTER TABLE repair_logs ADD COLUMN duration_seconds INTEGER DEFAULT 0;',
+      'ALTER TABLE repair_logs ADD COLUMN diagnostics_outcome TEXT;',
+      'ALTER TABLE repair_logs ADD COLUMN repair_categories TEXT;',
+      'ALTER TABLE users ADD COLUMN signature_url TEXT;',
+      "ALTER TABLE users ADD COLUMN delete_status VARCHAR(20) DEFAULT 'none';",
+      "ALTER TABLE users ADD COLUMN qc_affiliation VARCHAR(20) DEFAULT 'Arisa';",
+      'ALTER TABLE service_orders ADD COLUMN assigned_tech_at TIMESTAMP;',
+      'ALTER TABLE service_orders ADD COLUMN repair_started_at TIMESTAMP;',
+      'ALTER TABLE service_orders ADD COLUMN repair_finished_at TIMESTAMP;',
+      'ALTER TABLE service_orders ADD COLUMN qc1_started_at TIMESTAMP;',
+      'ALTER TABLE service_orders ADD COLUMN qc1_finished_at TIMESTAMP;',
+      'ALTER TABLE service_orders ADD COLUMN qc2_started_at TIMESTAMP;',
+      'ALTER TABLE service_orders ADD COLUMN qc2_finished_at TIMESTAMP;',
+      "ALTER TABLE service_orders ADD COLUMN bast_status VARCHAR(50) DEFAULT 'Pending_BAST';",
+      "ALTER TABLE service_orders ADD COLUMN sea_approval_decision VARCHAR(50);",
+      'ALTER TABLE service_orders ADD COLUMN diagnostic_started_at TIMESTAMP;',
+      'ALTER TABLE service_orders ADD COLUMN diagnostic_submitted_at TIMESTAMP;',
+      'ALTER TABLE service_orders ADD COLUMN budget_approved_at TIMESTAMP;',
+      'ALTER TABLE service_orders ADD COLUMN budget_approved_by_user_id INTEGER;',
+      'ALTER TABLE service_orders ADD COLUMN estimated_part_cost DECIMAL(12,2) DEFAULT 0;',
+      'ALTER TABLE service_orders ADD COLUMN estimated_service_cost DECIMAL(12,2) DEFAULT 0;',
+      'ALTER TABLE service_orders ADD COLUMN total_estimated_cost DECIMAL(12,2) DEFAULT 0;',
+      'ALTER TABLE service_orders ADD COLUMN harvest_reason TEXT;',
+      'ALTER TABLE branches ADD COLUMN diagnostic_fee INTEGER DEFAULT 30000;',
+      "UPDATE users SET is_active = false WHERE role = 'Technician' AND (branch_id IS NULL OR branch_id = 0);"
+    ];
+
+    for (const q of safeQueries) {
+      try { await sequelize.query(q); } catch (e) {}
+    }
+
     console.log('✅ Skema tabel Sequelize berhasil di-sync.');
 
     await ensureDefaultBranches();
     await ensureDefaultPermissions();
     await ensureDefaultUsers();
-
-    app.listen(PORT, '0.0.0.0', () => {
-      console.log(`🚀 Server Shopee Repair API berjalan di port ${PORT}`);
-    });
   } catch (error) {
-    console.error('❌ Gagal menyalakan server:', error.message);
+    console.error('⚠️ Warning inisialisasi database:', error.message);
   }
 };
 
-startServer();
+initDatabase();
