@@ -387,6 +387,9 @@ const getIntakeDailyBASTReport = async (req, res) => {
 
     const items = orders.map((o, idx) => ({
       no: idx + 1,
+      id: o.id,
+      service_order_id: o.id,
+      service_id: o.service_id,
       asset_id: o.device?.device_id || '-',
       asset_tag: o.device?.asset_tag || o.device?.device_id || '-',
       brand_model: o.device ? `${o.device.brand} ${o.device.model}` : '-',

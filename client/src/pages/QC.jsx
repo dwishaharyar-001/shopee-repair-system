@@ -10,15 +10,22 @@ import {
   FileText,
   TrendingUp,
   Laptop,
-  ArrowRight
+  ArrowRight,
+  FileCheck,
+  Calculator
 } from 'lucide-react';
 import { qcService } from '../services/qcService';
+import { bastService } from '../services/bastService';
+import { diagnosticService } from '../services/diagnosticService';
 import api from '../services/api';
 import QCCheckpoint1Modal from '../components/QCCheckpoint1Modal';
 import QCCheckpoint2Modal from '../components/QCCheckpoint2Modal';
+import SEABastVerificationModal from '../components/SEABastVerificationModal';
+import SEABudgetApprovalModal from '../components/SEABudgetApprovalModal';
 
 const QC = () => {
-  const [activeTab, setActiveTab] = useState('qc1'); // 'qc1', 'qc2', 'history'
+  const [activeTab, setActiveTab] = useState('sea_bast'); // 'sea_bast', 'qc1', 'qc2', 'history'
+  const [pendingBasts, setPendingBasts] = useState([]);
   const [pendingOrders, setPendingOrders] = useState([]);
   const [historyLogs, setHistoryLogs] = useState([]);
   const [metrics, setMetrics] = useState({
@@ -39,6 +46,11 @@ const QC = () => {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [isQC1Open, setIsQC1Open] = useState(false);
   const [isQC2Open, setIsQC2Open] = useState(false);
+  const [selectedBastId, setSelectedBastId] = useState(null);
+  const [isSeaBastModalOpen, setIsSeaBastModalOpen] = useState(false);
+  const [pendingBudgetOrders, setPendingBudgetOrders] = useState([]);
+  const [selectedBudgetOrder, setSelectedBudgetOrder] = useState(null);
+  const [isSeaBudgetModalOpen, setIsSeaBudgetModalOpen] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -52,7 +64,13 @@ const QC = () => {
         setMetrics(metricsRes.data);
       }
 
-      if (activeTab === 'history') {
+      if (activeTab === 'sea_bast') {
+        const bastRes = await bastService.getPendingSeaBasts();
+        if (bastRes.success) setPendingBasts(bastRes.data);
+      } else if (activeTab === 'sea_budget') {
+        const budgetRes = await diagnosticService.getPendingDiagnosticApprovals();
+        if (budgetRes.success) setPendingBudgetOrders(budgetRes.data);
+      } else if (activeTab === 'history') {
         const historyRes = await qcService.getQCHistory();
         if (historyRes.success) setHistoryLogs(historyRes.data);
       } else {
@@ -143,6 +161,30 @@ const QC = () => {
       {/* Tabs Bar (Mobile friendly stack/wrap) */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs p-1.5 flex flex-col sm:flex-row gap-1.5 text-xs font-semibold">
         <button
+          onClick={() => setActiveTab('sea_bast')}
+          className={`flex-1 py-2.5 px-3 rounded-xl transition-all flex items-center justify-center space-x-2 text-center ${
+            activeTab === 'sea_bast'
+              ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md shadow-purple-600/20 font-bold'
+              : 'text-slate-600 hover:bg-slate-100'
+          }`}
+        >
+          <FileCheck className="w-4 h-4 flex-shrink-0" />
+          <span className="truncate">Verifikasi BAST Intake (QC SEA)</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('sea_budget')}
+          className={`flex-1 py-2.5 px-3 rounded-xl transition-all flex items-center justify-center space-x-2 text-center ${
+            activeTab === 'sea_budget'
+              ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md shadow-emerald-600/20 font-bold'
+              : 'text-slate-600 hover:bg-slate-100'
+          }`}
+        >
+          <Calculator className="w-4 h-4 flex-shrink-0" />
+          <span className="truncate">Approval Budget & Rencana (QC SEA)</span>
+        </button>
+
+        <button
           onClick={() => setActiveTab('qc1')}
           className={`flex-1 py-2.5 px-3 rounded-xl transition-all flex items-center justify-center space-x-2 text-center ${
             activeTab === 'qc1'
@@ -183,9 +225,135 @@ const QC = () => {
       <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs overflow-hidden">
         {isLoading ? (
           <div className="p-12 text-center text-slate-400 space-y-3">
-            <div className="w-8 h-8 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+            <div className="w-8 h-8 border-4 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
             <p className="text-xs">Memuat data pengujian QC...</p>
           </div>
+        ) : activeTab === 'sea_bast' ? (
+          /* Task Item Queue: SEA BAST Verification Table & Cards */
+          pendingBasts.length === 0 ? (
+            <div className="p-12 text-center text-slate-400 space-y-2">
+              <CheckCircle2 className="w-10 h-10 mx-auto text-emerald-400" />
+              <p className="font-semibold text-slate-600 text-sm">Tidak ada dokumen BAST intake harian yang memerlukan verifikasi QC SEA saat ini.</p>
+              <p className="text-xs">Semua BAST intake yang dikirim oleh Coordinator Arisa telah terverifikasi.</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase font-semibold">
+                    <th className="py-3 px-4">Nomor BAST</th>
+                    <th className="py-3 px-4">Tanggal Intake</th>
+                    <th className="py-3 px-4">Jumlah Perangkat</th>
+                    <th className="py-3 px-4">First Party (Coordinator)</th>
+                    <th className="py-3 px-4">Status Dokumen</th>
+                    <th className="py-3 px-4 text-center">Aksi Verifikasi</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {pendingBasts.map((bast) => (
+                    <tr key={bast.id} className="hover:bg-slate-50/80 transition-colors">
+                      <td className="py-3.5 px-4 font-mono font-bold text-slate-900">
+                        {bast.bast_number}
+                      </td>
+                      <td className="py-3.5 px-4 font-semibold text-slate-800">
+                        {bast.intake_date || new Date(bast.created_at).toLocaleDateString('id-ID')}
+                      </td>
+                      <td className="py-3.5 px-4 font-bold text-blue-900 font-mono">
+                        {bast.items?.length || 0} Unit Perangkat
+                      </td>
+                      <td className="py-3.5 px-4 font-medium text-slate-700">
+                        {bast.firstPartyUser?.full_name || 'Coordinator Arisa'}
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <span className="px-2.5 py-1 rounded-full text-[10px] font-bold border bg-amber-50 text-amber-800 border-amber-300">
+                          Menunggu Verifikasi QC SEA
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4 text-center">
+                        <button
+                          onClick={() => {
+                            setSelectedBastId(bast.id);
+                            setIsSeaBastModalOpen(true);
+                          }}
+                          className="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-purple-600/20 flex items-center space-x-1.5 mx-auto"
+                        >
+                          <ShieldCheck className="w-4 h-4" />
+                          <span>Verifikasi BAST Per Item</span>
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )
+        ) : activeTab === 'sea_budget' ? (
+          /* Task Item Queue: SEA Diagnostic Budget Approval Table */
+          pendingBudgetOrders.length === 0 ? (
+            <div className="p-12 text-center text-slate-400 space-y-2">
+              <CheckCircle2 className="w-10 h-10 mx-auto text-emerald-400" />
+              <p className="font-semibold text-slate-600 text-sm">Tidak ada antrean Rencana Anggaran Biaya (RAB) yang memerlukan approval QC SEA saat ini.</p>
+              <p className="text-xs">Semua Rencana Perbaikan Diagnosa dari Teknisi telah diproses.</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase font-semibold">
+                    <th className="py-3 px-4">ServiceID & Perangkat</th>
+                    <th className="py-3 px-4">Cabang</th>
+                    <th className="py-3 px-4">Teknisi Diagnosa</th>
+                    <th className="py-3 px-4 text-right">Biaya Sparepart</th>
+                    <th className="py-3 px-4 text-right">Biaya Service</th>
+                    <th className="py-3 px-4 text-right">Total Budget</th>
+                    <th className="py-3 px-4 text-center">Aksi Review Budget</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {pendingBudgetOrders.map((order) => (
+                    <tr key={order.id} className="hover:bg-slate-50/80 transition-colors">
+                      <td className="py-3.5 px-4 font-semibold">
+                        <div className="text-slate-900 font-mono text-xs font-bold">
+                          {order.service_id}
+                        </div>
+                        <div className="text-[11px] text-slate-600 font-medium">
+                          {order.device?.brand} {order.device?.model}
+                        </div>
+                        <div className="text-[10px] text-slate-400 font-mono">{order.device?.serial_number}</div>
+                      </td>
+                      <td className="py-3.5 px-4 font-medium text-slate-700">
+                        {order.branch?.name || '-'}
+                      </td>
+                      <td className="py-3.5 px-4 font-medium text-emerald-700">
+                        {order.assignedTechnician?.user?.full_name || 'Teknisi Arisa'}
+                      </td>
+                      <td className="py-3.5 px-4 text-right font-mono font-bold text-amber-800">
+                        Rp {parseFloat(order.estimated_part_cost || 0).toLocaleString('id-ID')}
+                      </td>
+                      <td className="py-3.5 px-4 text-right font-mono font-bold text-cyan-800">
+                        Rp {parseFloat(order.estimated_service_cost || 0).toLocaleString('id-ID')}
+                      </td>
+                      <td className="py-3.5 px-4 text-right font-mono font-black text-purple-900">
+                        Rp {parseFloat(order.total_estimated_cost || 0).toLocaleString('id-ID')}
+                      </td>
+                      <td className="py-3.5 px-4 text-center">
+                        <button
+                          onClick={() => {
+                            setSelectedBudgetOrder(order);
+                            setIsSeaBudgetModalOpen(true);
+                          }}
+                          className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-emerald-600/20 flex items-center space-x-1.5 mx-auto"
+                        >
+                          <Calculator className="w-4 h-4" />
+                          <span>Review Budget & Approval</span>
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )
         ) : activeTab === 'history' ? (
           /* History Audit Table & Mobile Cards */
           historyLogs.length === 0 ? (
@@ -433,6 +601,32 @@ const QC = () => {
           setSelectedOrder(null);
         }}
         order={selectedOrder}
+        onSuccess={(msg) => {
+          showToast(msg);
+          fetchData();
+        }}
+      />
+
+      <SEABastVerificationModal
+        isOpen={isSeaBastModalOpen}
+        onClose={() => {
+          setIsSeaBastModalOpen(false);
+          setSelectedBastId(null);
+        }}
+        bastId={selectedBastId}
+        onSuccess={(msg) => {
+          showToast(msg);
+          fetchData();
+        }}
+      />
+
+      <SEABudgetApprovalModal
+        isOpen={isSeaBudgetModalOpen}
+        onClose={() => {
+          setIsSeaBudgetModalOpen(false);
+          setSelectedBudgetOrder(null);
+        }}
+        order={selectedBudgetOrder}
         onSuccess={(msg) => {
           showToast(msg);
           fetchData();

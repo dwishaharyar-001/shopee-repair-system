@@ -41,9 +41,18 @@ const ServiceOrder = sequelize.define('ServiceOrder', {
     allowNull: false
   },
   status: {
-    type: DataTypes.ENUM('Intake', 'In Repair', 'QC1 Pending', 'Rework', 'QC2 Pending', 'Released', 'Harvested'),
+    type: DataTypes.ENUM('Intake', 'Diagnostic_Phase', 'Diagnostic_Pending_Approval', 'Diagnostic_Revision', 'In Repair', 'QC1 Pending', 'Rework', 'QC2 Pending', 'Released', 'Harvested'),
     allowNull: false,
     defaultValue: 'Intake'
+  },
+  bast_status: {
+    type: DataTypes.ENUM('Pending_BAST', 'Submitted_to_SEA', 'Approved_SEA', 'Revision_Requested'),
+    allowNull: false,
+    defaultValue: 'Pending_BAST'
+  },
+  sea_approval_decision: {
+    type: DataTypes.ENUM('Full_Approve', 'Partial_Approve', 'Not_Approve_Harvest', 'Revision_Requested'),
+    allowNull: true
   },
   assigned_technician_id: {
     type: DataTypes.INTEGER,
@@ -71,6 +80,42 @@ const ServiceOrder = sequelize.define('ServiceOrder', {
   },
   assigned_tech_at: {
     type: DataTypes.DATE,
+    allowNull: true
+  },
+  diagnostic_started_at: {
+    type: DataTypes.DATE,
+    allowNull: true
+  },
+  diagnostic_submitted_at: {
+    type: DataTypes.DATE,
+    allowNull: true
+  },
+  budget_approved_at: {
+    type: DataTypes.DATE,
+    allowNull: true
+  },
+  budget_approved_by_user_id: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    references: {
+      model: 'users',
+      key: 'id'
+    }
+  },
+  estimated_part_cost: {
+    type: DataTypes.DECIMAL(12, 2),
+    defaultValue: 0.00
+  },
+  estimated_service_cost: {
+    type: DataTypes.DECIMAL(12, 2),
+    defaultValue: 0.00
+  },
+  total_estimated_cost: {
+    type: DataTypes.DECIMAL(12, 2),
+    defaultValue: 0.00
+  },
+  harvest_reason: {
+    type: DataTypes.TEXT,
     allowNull: true
   },
   repair_started_at: {

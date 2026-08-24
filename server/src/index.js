@@ -14,6 +14,8 @@ const partsRoutes = require('./routes/partsRoutes');
 const menuRoutes = require('./routes/menuRoutes');
 const branchRoutes = require('./routes/branchRoutes');
 const reportRoutes = require('./routes/reportRoutes');
+const bastRoutes = require('./routes/bastRoutes');
+const diagnosticRoutes = require('./routes/diagnosticRoutes');
 
 const { ensureDefaultBranches } = require('./controllers/branchController');
 const { ensureDefaultPermissions } = require('./controllers/menuController');
@@ -49,9 +51,13 @@ app.use('/api/parts-inventory', partsRoutes);
 app.use('/api/menu', menuRoutes);
 app.use('/api/branches', branchRoutes);
 app.use('/api/reports', reportRoutes);
+app.use('/api/bast', bastRoutes);
+app.use('/api/diagnostics', diagnosticRoutes);
 
 // Fallback direct routes
 app.use('/auth', authRoutes);
+app.use('/bast', bastRoutes);
+app.use('/diagnostics', diagnosticRoutes);
 
 // Global Error Handler
 app.use((err, req, res, next) => {
@@ -194,6 +200,16 @@ const startServer = async () => {
     try { await sequelize.query('ALTER TABLE service_orders ADD COLUMN qc1_finished_at DATETIME;'); } catch (e) {}
     try { await sequelize.query('ALTER TABLE service_orders ADD COLUMN qc2_started_at DATETIME;'); } catch (e) {}
     try { await sequelize.query('ALTER TABLE service_orders ADD COLUMN qc2_finished_at DATETIME;'); } catch (e) {}
+    try { await sequelize.query("ALTER TABLE service_orders ADD COLUMN bast_status VARCHAR(50) DEFAULT 'Pending_BAST';"); } catch (e) {}
+    try { await sequelize.query("ALTER TABLE service_orders ADD COLUMN sea_approval_decision VARCHAR(50);"); } catch (e) {}
+    try { await sequelize.query('ALTER TABLE service_orders ADD COLUMN diagnostic_started_at DATETIME;'); } catch (e) {}
+    try { await sequelize.query('ALTER TABLE service_orders ADD COLUMN diagnostic_submitted_at DATETIME;'); } catch (e) {}
+    try { await sequelize.query('ALTER TABLE service_orders ADD COLUMN budget_approved_at DATETIME;'); } catch (e) {}
+    try { await sequelize.query('ALTER TABLE service_orders ADD COLUMN budget_approved_by_user_id INTEGER;'); } catch (e) {}
+    try { await sequelize.query('ALTER TABLE service_orders ADD COLUMN estimated_part_cost DECIMAL(12,2) DEFAULT 0;'); } catch (e) {}
+    try { await sequelize.query('ALTER TABLE service_orders ADD COLUMN estimated_service_cost DECIMAL(12,2) DEFAULT 0;'); } catch (e) {}
+    try { await sequelize.query('ALTER TABLE service_orders ADD COLUMN total_estimated_cost DECIMAL(12,2) DEFAULT 0;'); } catch (e) {}
+    try { await sequelize.query('ALTER TABLE service_orders ADD COLUMN harvest_reason TEXT;'); } catch (e) {}
     try { await sequelize.query('ALTER TABLE branches ADD COLUMN diagnostic_fee INTEGER DEFAULT 30000;'); } catch (e) {}
     try { await sequelize.query("UPDATE users SET is_active = false WHERE role = 'Technician' AND (branch_id IS NULL OR branch_id = 0);"); } catch (e) {}
     console.log('✅ Skema tabel Sequelize berhasil di-sync.');

@@ -13,6 +13,9 @@ const RoleMenuAccess = require('./RoleMenuAccess');
 const Branch = require('./Branch');
 const BranchCategoryPrice = require('./BranchCategoryPrice');
 const BrokenPart = require('./BrokenPart');
+const BastDocument = require('./BastDocument');
+const BastItem = require('./BastItem');
+const DiagnosticPlanItem = require('./DiagnosticPlanItem');
 
 // Branch <-> BranchCategoryPrice
 Branch.hasMany(BranchCategoryPrice, { foreignKey: 'branch_id', as: 'categoryPrices' });
@@ -106,6 +109,38 @@ BrokenPart.belongsTo(Device, { foreignKey: 'device_id', as: 'device' });
 User.hasMany(BrokenPart, { foreignKey: 'reported_by_user_id', as: 'reportedBrokenParts' });
 BrokenPart.belongsTo(User, { foreignKey: 'reported_by_user_id', as: 'reportedBy' });
 
+// BastDocument <-> BastItem
+BastDocument.hasMany(BastItem, { foreignKey: 'bast_document_id', as: 'items', onDelete: 'CASCADE' });
+BastItem.belongsTo(BastDocument, { foreignKey: 'bast_document_id', as: 'bastDocument' });
+
+// ServiceOrder <-> BastItem
+ServiceOrder.hasMany(BastItem, { foreignKey: 'service_order_id', as: 'bastItems' });
+BastItem.belongsTo(ServiceOrder, { foreignKey: 'service_order_id', as: 'serviceOrder' });
+
+// Device <-> BastItem
+Device.hasMany(BastItem, { foreignKey: 'device_id', as: 'bastItems' });
+BastItem.belongsTo(Device, { foreignKey: 'device_id', as: 'device' });
+
+// Branch <-> BastDocument
+Branch.hasMany(BastDocument, { foreignKey: 'branch_id', as: 'bastDocuments' });
+BastDocument.belongsTo(Branch, { foreignKey: 'branch_id', as: 'branch' });
+
+// User (First Party / Coordinator) <-> BastDocument
+User.hasMany(BastDocument, { foreignKey: 'first_party_user_id', as: 'createdBasts' });
+BastDocument.belongsTo(User, { foreignKey: 'first_party_user_id', as: 'firstPartyUser' });
+
+// User (Second Party / QC SEA) <-> BastDocument
+User.hasMany(BastDocument, { foreignKey: 'second_party_user_id', as: 'verifiedBasts' });
+BastDocument.belongsTo(User, { foreignKey: 'second_party_user_id', as: 'secondPartyUser' });
+
+// ServiceOrder <-> DiagnosticPlanItem
+ServiceOrder.hasMany(DiagnosticPlanItem, { foreignKey: 'service_order_id', as: 'diagnosticPlanItems' });
+DiagnosticPlanItem.belongsTo(ServiceOrder, { foreignKey: 'service_order_id', as: 'serviceOrder' });
+
+// Part <-> DiagnosticPlanItem
+Part.hasMany(DiagnosticPlanItem, { foreignKey: 'part_id', as: 'diagnosticPlanItems' });
+DiagnosticPlanItem.belongsTo(Part, { foreignKey: 'part_id', as: 'part' });
+
 module.exports = {
   sequelize,
   User,
@@ -121,5 +156,8 @@ module.exports = {
   RoleMenuAccess,
   Branch,
   BranchCategoryPrice,
-  BrokenPart
+  BrokenPart,
+  BastDocument,
+  BastItem,
+  DiagnosticPlanItem
 };

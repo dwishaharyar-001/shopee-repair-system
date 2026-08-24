@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { repairService } from '../services/repairService';
+import { diagnosticService } from '../services/diagnosticService';
 import RequestPartModal from '../components/RequestPartModal';
 import BrokenPartModal from '../components/BrokenPartModal';
 import api from '../services/api';
@@ -205,9 +206,11 @@ const Repairs = () => {
     setTimeout(() => setToastMessage(''), 4000);
   };
 
-  const handleCategoryToggle = (orderId, catName, isTimerRunning) => {
-    if (!isTimerRunning) {
-      showToast('⚠️ Klik "Mulai Perbaikan" terlebih dahulu untuk mengaktifkan perubahan kategori perbaikan.');
+  const [submittingDiagnostic, setSubmittingDiagnostic] = useState({});
+
+  const handleCategoryToggle = (orderId, catName, canEdit = true) => {
+    if (!canEdit) {
+      showToast('⚠️ Kategori perbaikan terkunci (Menunggu persetujuan QC SEA).');
       return;
     }
     setSelectedCategories(prev => {
@@ -218,6 +221,41 @@ const Repairs = () => {
         return { ...prev, [orderId]: [...currentList, catName] };
       }
     });
+  };
+
+  const handleSubmitDiagnosticPlan = async (orderId) => {
+    setSubmittingDiagnostic(prev => ({ ...prev, [orderId]: true }));
+    try {
+      const fault = faultDescriptions[orderId] || '';
+      const outcome = diagnosticsOutcome[orderId] || '';
+      const categories = selectedCategories[orderId] || [];
+
+      const activeOrder = queue.find(q => q.id === orderId);
+      const plannedParts = (activeOrder?.diagnosticPlanItems || activeOrder?.consumedParts || []).map(item => ({
+        part_id: item.part_id,
+        quantity: item.quantity,
+        unit_cost: item.unit_cost,
+        category_name: item.category_name
+      }));
+
+      const res = await diagnosticService.submitDiagnosticPlan(orderId, {
+        fault_description: fault,
+        diagnostics_outcome: outcome,
+        selected_categories: categories,
+        planned_parts: plannedParts
+      });
+
+      if (res && res.success) {
+        showToast(res.message);
+        fetchQueue();
+      } else {
+        showToast(res?.message || 'Gagal mengirim Rencana Diagnosa ke QC SEA.');
+      }
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Gagal mengirim Rencana Diagnosa ke QC SEA.');
+    } finally {
+      setSubmittingDiagnostic(prev => ({ ...prev, [orderId]: false }));
+    }
   };
 
   // 1. Save Fault Description (Keluhan Kerusakan)
@@ -524,6 +562,36 @@ const Repairs = () => {
                       <p className="text-[11px] sm:text-xs text-slate-400 font-mono mt-0.5">
                         SN: {item.device?.serial_number} | Asset: {item.device?.asset_type}
                       </p>
+
+                      {/* Phase Status Badge */}
+                      <div className="mt-2 flex items-center space-x-2">
+                        {item.status === 'Diagnostic_Pending_Approval' ? (
+                          <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300 flex items-center space-x-1">
+                            <Clock className="w-3 h-3 text-amber-600 animate-spin" />
+                            <span>Phase 1: Menunggu Approval Budget QC SEA</span>
+                          </span>
+                        ) : item.status === 'Diagnostic_Revision' ? (
+                          <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-purple-100 text-purple-800 border border-purple-300 flex items-center space-x-1">
+                            <RefreshCw className="w-3 h-3 text-purple-600" />
+                            <span>Phase 1: QC SEA Meminta Revisi Diagnosa</span>
+                          </span>
+                        ) : item.status === 'Harvested' ? (
+                          <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-300 flex items-center space-x-1">
+                            <AlertOctagon className="w-3 h-3 text-rose-600" />
+                            <span>Perbaikan Ditolak (Kanibalisasi / Harvested)</span>
+                          </span>
+                        ) : item.status === 'In Repair' ? (
+                          <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center space-x-1">
+                            <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                            <span>Phase 2: Service Perbaikan (Budget Approved)</span>
+                          </span>
+                        ) : (
+                          <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-300 flex items-center space-x-1">
+                            <Stethoscope className="w-3 h-3 text-blue-600" />
+                            <span>Phase 1: Diagnostics & Rencana Perbaikan</span>
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                     {/* Timer Control Box */}
@@ -538,27 +606,68 @@ const Repairs = () => {
                         </div>
                       </div>
 
-                      {isTimerRunning ? (
-                        <button
-                          type="button"
-                          onClick={() => handleStopTimer(item.id)}
-                          className="w-full sm:w-auto px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl shadow-md transition-colors flex items-center justify-center space-x-1.5 active:scale-95"
-                        >
-                          <Square className="w-4 h-4 fill-white" />
-                          <span>Stop / Pause Timer</span>
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => handleStartTimer(item.id)}
-                          className="w-full sm:w-auto px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-md transition-colors flex items-center justify-center space-x-1.5 active:scale-95"
-                        >
-                          <Play className="w-4 h-4 fill-white" />
-                          <span>Mulai Perbaikan</span>
-                        </button>
+                      {item.status === 'In Repair' && (
+                        isTimerRunning ? (
+                          <button
+                            type="button"
+                            onClick={() => handleStopTimer(item.id)}
+                            className="w-full sm:w-auto px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl shadow-md transition-colors flex items-center justify-center space-x-1.5 active:scale-95"
+                          >
+                            <Square className="w-4 h-4 fill-white" />
+                            <span>Stop / Pause Service</span>
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => handleStartTimer(item.id)}
+                            className="w-full sm:w-auto px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-md transition-colors flex items-center justify-center space-x-1.5 active:scale-95"
+                          >
+                            <Play className="w-4 h-4 fill-white" />
+                            <span>Mulai Service</span>
+                          </button>
+                        )
                       )}
                     </div>
                   </div>
+
+                  {/* Pending Approval Notice Banner */}
+                  {item.status === 'Diagnostic_Pending_Approval' && (
+                    <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-xs space-y-1 text-amber-900">
+                      <div className="font-bold flex items-center space-x-2">
+                        <Clock className="w-4 h-4 text-amber-600 animate-spin" />
+                        <span>Rencana Perbaikan & Anggaran Biaya telah dikirim ke QC SEA.</span>
+                      </div>
+                      <p className="text-[11px] text-amber-800">
+                        Pekerjaan fisik Phase Service saat ini terkunci hingga tim QC SEA memberikan persetujuan Rencana Anggaran Biaya.
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Revision Requested Notice Banner */}
+                  {item.status === 'Diagnostic_Revision' && (
+                    <div className="bg-purple-50 border border-purple-200 rounded-2xl p-4 text-xs space-y-1 text-purple-900">
+                      <div className="font-bold flex items-center space-x-2">
+                        <RefreshCw className="w-4 h-4 text-purple-600" />
+                        <span>QC SEA Meminta Revisi Rencana Perbaikan & Budget.</span>
+                      </div>
+                      <p className="text-[11px] text-purple-800 bg-white p-2.5 rounded-xl border border-purple-200">
+                        {item.notes || 'Harap periksa kembali hasil diagnosa dan kebutuhan sparepart.'}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Harvested Notice Banner */}
+                  {item.status === 'Harvested' && (
+                    <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 text-xs space-y-1 text-rose-900">
+                      <div className="font-bold flex items-center space-x-2">
+                        <AlertOctagon className="w-4 h-4 text-rose-600" />
+                        <span>Device Ditolak Perbaikan & Dipindahkan ke Kanibalisasi (Harvested).</span>
+                      </div>
+                      <p className="text-[11px] text-rose-800">
+                        Alasan: {item.harvest_reason || 'Kebutuhan sparepart/biaya tidak disetujui oleh QC SEA.'}
+                      </p>
+                    </div>
+                  )}
 
                   {/* Timer Paused Lock Notice Banner */}
                   {!isTimerRunning && (
@@ -941,22 +1050,42 @@ const Repairs = () => {
                       </div>
                     )}
 
-                    <button
-                      type="button"
-                      disabled={!isTimerRunning}
-                      onClick={() => {
-                        if (!isTimerRunning) {
-                          showToast('⚠️ Klik "Mulai Perbaikan" terlebih dahulu untuk menyelesikan perbaikan.');
-                          return;
-                        }
-                        handleSubmitQC1(item.id);
-                      }}
-                      className="w-full sm:w-auto px-5 py-3 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white text-xs font-bold rounded-xl shadow-md shadow-orange-500/20 transition-all flex items-center justify-center space-x-2 disabled:opacity-40 disabled:cursor-not-allowed active:scale-95"
-                      title={!isTimerRunning ? "Klik 'Mulai Perbaikan' terlebih dahulu untuk menyelesikan perbaikan" : "Selesai Perbaikan & Submit ke QC1 Arisa"}
-                    >
-                      <Send className="w-4 h-4" />
-                      <span>Selesai Perbaikan & Submit ke QC1 Arisa</span>
-                    </button>
+                    {item.status === 'In Repair' ? (
+                      <button
+                        type="button"
+                        disabled={!isTimerRunning}
+                        onClick={() => {
+                          if (!isTimerRunning) {
+                            showToast('⚠️ Klik "Mulai Service" terlebih dahulu untuk menyelesaikan perbaikan.');
+                            return;
+                          }
+                          handleSubmitQC1(item.id);
+                        }}
+                        className="w-full sm:w-auto px-5 py-3 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white text-xs font-bold rounded-xl shadow-md shadow-orange-500/20 transition-all flex items-center justify-center space-x-2 disabled:opacity-40 disabled:cursor-not-allowed active:scale-95"
+                        title={!isTimerRunning ? "Klik 'Mulai Service' terlebih dahulu untuk menyelesikan perbaikan" : "Selesai Perbaikan & Submit ke QC1 Arisa"}
+                      >
+                        <Send className="w-4 h-4" />
+                        <span>Selesai Perbaikan & Submit ke QC1 Arisa</span>
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled={item.status === 'Diagnostic_Pending_Approval' || item.status === 'Harvested' || submittingDiagnostic[item.id]}
+                        onClick={() => handleSubmitDiagnosticPlan(item.id)}
+                        className="w-full sm:w-auto px-5 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white text-xs font-bold rounded-xl shadow-md shadow-purple-600/20 transition-all flex items-center justify-center space-x-2 disabled:opacity-40 disabled:cursor-not-allowed active:scale-95"
+                      >
+                        <Send className="w-4 h-4" />
+                        <span>
+                          {submittingDiagnostic[item.id]
+                            ? 'Mengirim Proposal...'
+                            : item.status === 'Diagnostic_Pending_Approval'
+                            ? 'Menunggu Approval QC SEA'
+                            : item.status === 'Harvested'
+                            ? 'Kanibalisasi (Terkunci)'
+                            : 'Kirim Rencana Perbaikan & Budget ke QC SEA'}
+                        </span>
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>

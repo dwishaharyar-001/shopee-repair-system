@@ -11,9 +11,16 @@ import {
   ArrowRight,
   ShieldCheck,
   PackageCheck,
-  PackageX
+  PackageX,
+  Send,
+  AlertCircle,
+  Clock
 } from 'lucide-react';
 import api from '../services/api';
+import { bastService } from '../services/bastService';
+import { useAuth } from '../context/AuthContext';
+import SEABastVerificationModal from '../components/SEABastVerificationModal';
+import SignatureModal from '../components/SignatureModal';
 
 const BASTDocuments = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -38,10 +45,24 @@ const BASTDocuments = () => {
   const [secondPartyTitle, setSecondPartyTitle] = useState('');
   const [secondPartyLocation, setSecondPartyLocation] = useState('Arisa Computer Service Center');
 
+  const { user } = useAuth();
+
   // Data State
   const [reportItems, setReportItems] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // BAST Workflow State & Verification Modals
+  const [currentBastRecord, setCurrentBastRecord] = useState(null);
+  const [isSeaVerificationOpen, setIsSeaVerificationOpen] = useState(false);
+  const [isSignatureModalOpen, setIsSignatureModalOpen] = useState(false);
+  const [isSubmittingBast, setIsSubmittingBast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+
+  const showToast = (msg) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(''), 4000);
+  };
 
   useEffect(() => {
     fetchUsers();
@@ -131,6 +152,79 @@ const BASTDocuments = () => {
     }
   };
 
+  // Check if BAST document already exists in DB for this date/no
+  useEffect(() => {
+    if (bastType === '1') {
+      fetchActiveBastRecord();
+    } else {
+      setCurrentBastRecord(null);
+    }
+  }, [bastType, intakeDate]);
+
+  const fetchActiveBastRecord = async () => {
+    try {
+      const res = await bastService.getBastHistory({ bast_type: '1' });
+      if (res.success && res.data) {
+        const match = res.data.find(b => b.intake_date === intakeDate || b.bast_number === bastNo);
+        setCurrentBastRecord(match || null);
+      }
+    } catch (e) {
+      console.warn('Fetch active BAST record error:', e);
+    }
+  };
+
+  const handleSubmitBastToSea = async (overrideSignature = null) => {
+    if (!reportItems || reportItems.length === 0) {
+      setError('Tidak ada data unit intake harian yang dapat dikirim ke BAST.');
+      return;
+    }
+
+    const signatureString = (typeof overrideSignature === 'string' && overrideSignature.trim()) 
+      ? overrideSignature 
+      : (typeof firstPartySignature === 'string' && firstPartySignature.trim()) 
+      ? firstPartySignature 
+      : null;
+
+    if (!signatureString) {
+      setIsSignatureModalOpen(true);
+      return;
+    }
+
+    setIsSubmittingBast(true);
+    setError('');
+
+    try {
+      // Map service order IDs from reportItems
+      const serviceOrderIds = reportItems
+        .map(i => i.id || i.service_order_id)
+        .filter(Boolean);
+
+      const res = await bastService.createBast({
+        bast_number: bastNo,
+        bast_type: '1',
+        intake_date: intakeDate,
+        service_order_ids: serviceOrderIds,
+        first_party_title: firstPartyTitle || 'Arisa Computer Team',
+        first_party_signature: signatureString
+      });
+
+      if (res && res.success) {
+        showToast(`Dokumen BAST '${res.data.bast_number}' berhasil dibuat dan dikirim ke QC SEA!`);
+        setCurrentBastRecord(res.data);
+        fetchReportData();
+      } else {
+        const errorDetail = res?.message || res?.error || 'Gagal merespons data BAST';
+        setError(`Gagal mengirim BAST: ${errorDetail}`);
+      }
+    } catch (err) {
+      console.error('Submit BAST error:', err);
+      const serverMsg = err.response?.data?.message || err.response?.data?.error || err.message || 'Error koneksi server';
+      setError(`Gagal membuat dan mengirim BAST ke QC SEA: ${serverMsg}`);
+    } finally {
+      setIsSubmittingBast(false);
+    }
+  };
+
   const handlePrint = () => {
     window.print();
   };
@@ -151,6 +245,14 @@ const BASTDocuments = () => {
 
   return (
     <div className="space-y-6">
+      {/* Toast Alert */}
+      {toastMessage && (
+        <div className="fixed top-20 right-4 sm:right-6 z-50 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl border border-slate-700 text-xs flex items-center space-x-2 animate-bounce">
+          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+          <span>{toastMessage}</span>
+        </div>
+      )}
+
       {/* Top Header Banner (Hidden during printing) */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900 text-white p-6 rounded-2xl shadow-xl print:hidden">
         <div className="flex items-center space-x-4">
@@ -158,21 +260,72 @@ const BASTDocuments = () => {
             <FileText className="w-7 h-7" />
           </div>
           <div>
-            <h1 className="text-xl font-extrabold tracking-tight">Dokumen BAST Handover Certificate</h1>
+            <div className="flex items-center space-x-2">
+              <h1 className="text-xl font-extrabold tracking-tight">Dokumen BAST Handover Certificate</h1>
+              {currentBastRecord && (
+                <span className={`px-2.5 py-0.5 rounded-full font-mono text-xs font-bold border ${
+                  currentBastRecord.status === 'Approved_SEA' 
+                    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                    : currentBastRecord.status === 'Revision_Requested'
+                    ? 'bg-rose-500/20 text-rose-300 border-rose-500/30'
+                    : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                }`}>
+                  Status: {currentBastRecord.status === 'Submitted_to_SEA' ? 'Menunggu QC SEA' : currentBastRecord.status}
+                </span>
+              )}
+            </div>
             <p className="text-xs text-slate-400 mt-0.5">
-              Pilih sub-menu proses dokumen BAST di bawah untuk pratinjau, pengisian PIC, dan pencetakan PDF.
+              Generate dokumen BAST Intake Harian Arisa ➔ Shopee & Verifikasi Persetujuan QC SEA
             </p>
           </div>
         </div>
 
-        <button
-          onClick={handlePrint}
-          className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-md transition-all flex items-center justify-center space-x-2 border border-emerald-500"
-        >
-          <Printer className="w-4 h-4" />
-          <span>Cetak / Save PDF BAST</span>
-        </button>
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Submit BAST to SEA (Coordinator Arisa) */}
+          {bastType === '1' && (
+            <button
+              onClick={() => handleSubmitBastToSea()}
+              disabled={isSubmittingBast}
+              className="px-5 py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white text-xs font-bold rounded-xl shadow-md transition-all flex items-center justify-center space-x-2 border border-orange-400 disabled:opacity-50"
+            >
+              <Send className="w-4 h-4" />
+              <span>{isSubmittingBast ? 'Mengirim...' : 'Submit & Sign BAST ke QC SEA'}</span>
+            </button>
+          )}
+
+          {/* Verifikasi BAST (QC SEA) */}
+          {currentBastRecord && (user?.role === 'QA_Liaison' || user?.role === 'Admin' || user?.qc_affiliation === 'Shopee') && (
+            <button
+              onClick={() => setIsSeaVerificationOpen(true)}
+              className="px-5 py-2.5 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-xl shadow-md transition-all flex items-center justify-center space-x-2 border border-purple-500"
+            >
+              <ShieldCheck className="w-4 h-4" />
+              <span>Verifikasi BAST (QC SEA)</span>
+            </button>
+          )}
+
+          <button
+            onClick={handlePrint}
+            className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-md transition-all flex items-center justify-center space-x-2 border border-emerald-500"
+          >
+            <Printer className="w-4 h-4" />
+            <span>Cetak / Save PDF BAST</span>
+          </button>
+        </div>
       </div>
+
+      {/* Error Alert Banner */}
+      {error && (
+        <div className="p-4 bg-red-50 border border-red-200 rounded-2xl text-red-700 text-xs font-semibold flex items-center justify-between print:hidden">
+          <div className="flex items-center space-x-2">
+            <AlertCircle className="w-5 h-5 flex-shrink-0 text-red-600" />
+            <span>{error}</span>
+          </div>
+          <button onClick={() => setError('')} className="text-red-500 hover:text-red-800 text-xs font-bold">
+            Dismiss
+          </button>
+        </div>
+      )}
 
       {/* SUB-MENU NAV TABS (Pemisahan 3 Sub-Menu Sesuai Peruntukan Proses) */}
       <div className="bg-white p-2 rounded-2xl border border-slate-200 shadow-sm print:hidden">
@@ -646,6 +799,28 @@ const BASTDocuments = () => {
           </>
         )}
       </div>
+
+      {/* BAST Verification & Signature Modals */}
+      <SEABastVerificationModal
+        isOpen={isSeaVerificationOpen}
+        onClose={() => setIsSeaVerificationOpen(false)}
+        bastId={currentBastRecord?.id}
+        onSuccess={(msg) => {
+          showToast(msg);
+          fetchActiveBastRecord();
+          fetchReportData();
+        }}
+      />
+
+      <SignatureModal
+        isOpen={isSignatureModalOpen}
+        onClose={() => setIsSignatureModalOpen(false)}
+        onSuccess={async (msg, sigUrl) => {
+          showToast(msg);
+          await fetchUsers();
+          handleSubmitBastToSea(sigUrl);
+        }}
+      />
     </div>
   );
 };

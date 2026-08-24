@@ -110,6 +110,19 @@ const Devices = () => {
     }
   };
 
+  const getBastBadgeClass = (bastStatus) => {
+    switch (bastStatus) {
+      case 'Approved_SEA':
+        return 'bg-emerald-100 text-emerald-800 border-emerald-300';
+      case 'Submitted_to_SEA':
+        return 'bg-amber-100 text-amber-800 border-amber-300';
+      case 'Revision_Requested':
+        return 'bg-rose-100 text-rose-800 border-rose-300';
+      default:
+        return 'bg-slate-100 text-slate-600 border-slate-300';
+    }
+  };
+
   return (
     <div className="space-y-4 sm:space-y-6">
       {/* Toast Notification */}
@@ -322,7 +335,8 @@ const Devices = () => {
                     <th className="py-3 px-4">Brand & Model</th>
                     <th className="py-3 px-4">Customer</th>
                     <th className="py-3 px-4">Teknisi</th>
-                    <th className="py-3 px-4">Status</th>
+                    <th className="py-3 px-4">Status Svc</th>
+                    <th className="py-3 px-4">BAST QC SEA</th>
                     <th className="py-3 px-4 text-center">Aksi</th>
                   </tr>
                 </thead>
@@ -362,6 +376,17 @@ const Devices = () => {
                       <td className="py-3.5 px-4">
                         <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border ${getStatusBadgeClass(row.status)}`}>
                           {row.status}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border ${getBastBadgeClass(row.bast_status)}`}>
+                          {row.bast_status === 'Approved_SEA'
+                            ? 'Approved SEA'
+                            : row.bast_status === 'Submitted_to_SEA'
+                            ? 'Pending SEA'
+                            : row.bast_status === 'Revision_Requested'
+                            ? 'Perlu Revisi'
+                            : 'Belum BAST'}
                         </span>
                       </td>
                       <td className="py-3.5 px-4 text-center">

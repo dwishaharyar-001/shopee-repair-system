@@ -277,11 +277,20 @@ const updateServiceOrder = async (req, res) => {
       }
     }
 
-    if (assigned_technician_id !== undefined) {
+    if (assigned_technician_id !== undefined && assigned_technician_id !== null && assigned_technician_id !== '') {
+      // Check BAST approval status before physical distribution to technician
+      if (order.bast_status !== 'Approved_SEA' && (!req.user || req.user.role !== 'Admin')) {
+        return res.status(400).json({
+          success: false,
+          message: 'Distribusi unit ke teknisi terkunci: Dokumen BAST belum disetujui oleh QC SEA. Mohon selesaikan verifikasi BAST terlebih dahulu.'
+        });
+      }
       order.assigned_technician_id = assigned_technician_id || null;
       if (assigned_technician_id && !order.assigned_tech_at) {
         order.assigned_tech_at = new Date();
       }
+    } else if (assigned_technician_id === null || assigned_technician_id === '') {
+      order.assigned_technician_id = null;
     }
 
     if (branch_id !== undefined) {

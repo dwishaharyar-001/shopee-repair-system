@@ -104,9 +104,8 @@ const SignatureModal = ({ isOpen, onClose, onSuccess }) => {
       });
 
       if (res.data && res.data.success) {
-        if (onSuccess) onSuccess(res.data.message);
+        if (onSuccess) onSuccess(res.data.message, signatureData);
         onClose();
-        window.location.reload();
       } else {
         setError(res.data.message || 'Gagal menyimpan tanda tangan.');
       }
