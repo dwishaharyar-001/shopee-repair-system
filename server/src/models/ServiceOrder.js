@@ -46,13 +46,22 @@ const ServiceOrder = sequelize.define('ServiceOrder', {
     defaultValue: 'Intake'
   },
   bast_status: {
-    type: DataTypes.STRING(50),
-    allowNull: true,
-    defaultValue: 'Pending_BAST'
+    type: DataTypes.VIRTUAL,
+    get() {
+      return this.getDataValue('bast_status') || 'Pending_BAST';
+    },
+    set(val) {
+      this.setDataValue('bast_status', val || 'Pending_BAST');
+    }
   },
   sea_approval_decision: {
-    type: DataTypes.STRING(50),
-    allowNull: true
+    type: DataTypes.VIRTUAL,
+    get() {
+      return this.getDataValue('sea_approval_decision') || null;
+    },
+    set(val) {
+      this.setDataValue('sea_approval_decision', val || null);
+    }
   },
   assigned_technician_id: {
     type: DataTypes.INTEGER,

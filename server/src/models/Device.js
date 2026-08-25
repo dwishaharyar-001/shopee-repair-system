@@ -26,9 +26,13 @@ const Device = sequelize.define('Device', {
     allowNull: false
   },
   asset_type: {
-    type: DataTypes.STRING(100),
-    allowNull: true,
-    defaultValue: 'Type A'
+    type: DataTypes.VIRTUAL,
+    get() {
+      return this.getDataValue('asset_type') || 'Type A';
+    },
+    set(val) {
+      this.setDataValue('asset_type', val || 'Type A');
+    }
   },
   customer_id: {
     type: DataTypes.INTEGER,
