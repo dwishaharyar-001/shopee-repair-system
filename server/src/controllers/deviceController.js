@@ -184,8 +184,8 @@ const createIntake = async (req, res) => {
     }
 
     // Ensure PostgreSQL table schema is up to date before processing intake
-    try { await sequelize.query("ALTER TABLE devices ADD COLUMN IF NOT EXISTS asset_type VARCHAR(100) DEFAULT 'Type A';"); } catch (e) {}
-    try { await sequelize.query('ALTER TABLE "devices" ADD COLUMN IF NOT EXISTS "asset_type" VARCHAR(100) DEFAULT \'Type A\';'); } catch (e) {}
+    try { await sequelize.query("ALTER TABLE devices ADD COLUMN IF NOT EXISTS asset_type VARCHAR(100) DEFAULT 'Type A';"); } catch (e) { global.lastAlterErr = 'd1: ' + e.message; }
+    try { await sequelize.query('ALTER TABLE "devices" ADD COLUMN IF NOT EXISTS "asset_type" VARCHAR(100) DEFAULT \'Type A\';'); } catch (e) { global.lastAlterErr += ' | d2: ' + e.message; }
     try { await sequelize.query("ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS bast_status VARCHAR(50) DEFAULT 'Pending_BAST';"); } catch (e) {}
     try { await sequelize.query('ALTER TABLE "service_orders" ADD COLUMN IF NOT EXISTS "bast_status" VARCHAR(50) DEFAULT \'Pending_BAST\';'); } catch (e) {}
     try { await sequelize.query("ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS sea_approval_decision VARCHAR(50);"); } catch (e) {}
@@ -305,7 +305,7 @@ const createIntake = async (req, res) => {
     });
   } catch (error) {
     console.error('createIntake error:', error);
-    return res.status(500).json({ success: false, message: 'Gagal memproses pendaftaran intake.', error: error.message });
+    return res.status(500).json({ success: false, message: 'Gagal memproses pendaftaran intake.', error: error.message + (global.lastAlterErr ? ' | ALTER_LOG: ' + global.lastAlterErr : '') });
   }
 };
 
