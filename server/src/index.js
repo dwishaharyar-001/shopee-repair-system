@@ -200,41 +200,41 @@ const initDatabase = async () => {
     await sequelize.authenticate();
     console.log('✅ Koneksi database berhasil terhubung.');
     
-    const queryInterface = sequelize.getQueryInterface();
-    const { DataTypes: DT } = require('sequelize');
-
-    const columnsToAdd = [
-      { table: 'devices', column: 'asset_type', attr: { type: DT.STRING(100), allowNull: true, defaultValue: 'Type A' } },
-      { table: 'service_orders', column: 'bast_status', attr: { type: DT.STRING(50), allowNull: true, defaultValue: 'Pending_BAST' } },
-      { table: 'service_orders', column: 'sea_approval_decision', attr: { type: DT.STRING(50), allowNull: true } },
-      { table: 'service_orders', column: 'assigned_tech_at', attr: { type: DT.DATE, allowNull: true } },
-      { table: 'service_orders', column: 'repair_started_at', attr: { type: DT.DATE, allowNull: true } },
-      { table: 'service_orders', column: 'repair_finished_at', attr: { type: DT.DATE, allowNull: true } },
-      { table: 'service_orders', column: 'qc1_started_at', attr: { type: DT.DATE, allowNull: true } },
-      { table: 'service_orders', column: 'qc1_finished_at', attr: { type: DT.DATE, allowNull: true } },
-      { table: 'service_orders', column: 'qc2_started_at', attr: { type: DT.DATE, allowNull: true } },
-      { table: 'service_orders', column: 'qc2_finished_at', attr: { type: DT.DATE, allowNull: true } },
-      { table: 'service_orders', column: 'diagnostic_started_at', attr: { type: DT.DATE, allowNull: true } },
-      { table: 'service_orders', column: 'diagnostic_submitted_at', attr: { type: DT.DATE, allowNull: true } },
-      { table: 'service_orders', column: 'budget_approved_at', attr: { type: DT.DATE, allowNull: true } },
-      { table: 'service_orders', column: 'budget_approved_by_user_id', attr: { type: DT.INTEGER, allowNull: true } },
-      { table: 'service_orders', column: 'estimated_part_cost', attr: { type: DT.DECIMAL(12, 2), defaultValue: 0.00 } },
-      { table: 'service_orders', column: 'estimated_service_cost', attr: { type: DT.DECIMAL(12, 2), defaultValue: 0.00 } },
-      { table: 'service_orders', column: 'total_estimated_cost', attr: { type: DT.DECIMAL(12, 2), defaultValue: 0.00 } },
-      { table: 'service_orders', column: 'harvest_reason', attr: { type: DT.TEXT, allowNull: true } },
-      { table: 'repair_logs', column: 'duration_seconds', attr: { type: DT.INTEGER, defaultValue: 0 } },
-      { table: 'repair_logs', column: 'diagnostics_outcome', attr: { type: DT.TEXT, allowNull: true } },
-      { table: 'repair_logs', column: 'repair_categories', attr: { type: DT.TEXT, allowNull: true } },
-      { table: 'users', column: 'signature_url', attr: { type: DT.TEXT, allowNull: true } },
-      { table: 'users', column: 'delete_status', attr: { type: DT.STRING(20), defaultValue: 'none' } },
-      { table: 'users', column: 'qc_affiliation', attr: { type: DT.STRING(20), defaultValue: 'Arisa' } },
-      { table: 'branches', column: 'diagnostic_fee', attr: { type: DT.INTEGER, defaultValue: 30000 } }
+    const directQueries = [
+      "ALTER TABLE devices ADD COLUMN asset_type VARCHAR(100) DEFAULT 'Type A';",
+      "ALTER TABLE service_orders ADD COLUMN bast_status VARCHAR(50) DEFAULT 'Pending_BAST';",
+      "ALTER TABLE service_orders ADD COLUMN sea_approval_decision VARCHAR(50);",
+      "ALTER TABLE service_orders ADD COLUMN assigned_tech_at TIMESTAMP;",
+      "ALTER TABLE service_orders ADD COLUMN repair_started_at TIMESTAMP;",
+      "ALTER TABLE service_orders ADD COLUMN repair_finished_at TIMESTAMP;",
+      "ALTER TABLE service_orders ADD COLUMN qc1_started_at TIMESTAMP;",
+      "ALTER TABLE service_orders ADD COLUMN qc1_finished_at TIMESTAMP;",
+      "ALTER TABLE service_orders ADD COLUMN qc2_started_at TIMESTAMP;",
+      "ALTER TABLE service_orders ADD COLUMN qc2_finished_at TIMESTAMP;",
+      "ALTER TABLE service_orders ADD COLUMN diagnostic_started_at TIMESTAMP;",
+      "ALTER TABLE service_orders ADD COLUMN diagnostic_submitted_at TIMESTAMP;",
+      "ALTER TABLE service_orders ADD COLUMN budget_approved_at TIMESTAMP;",
+      "ALTER TABLE service_orders ADD COLUMN budget_approved_by_user_id INTEGER;",
+      "ALTER TABLE service_orders ADD COLUMN estimated_part_cost DECIMAL(12,2) DEFAULT 0;",
+      "ALTER TABLE service_orders ADD COLUMN estimated_service_cost DECIMAL(12,2) DEFAULT 0;",
+      "ALTER TABLE service_orders ADD COLUMN total_estimated_cost DECIMAL(12,2) DEFAULT 0;",
+      "ALTER TABLE service_orders ADD COLUMN harvest_reason TEXT;",
+      "ALTER TABLE repair_logs ADD COLUMN duration_seconds INTEGER DEFAULT 0;",
+      "ALTER TABLE repair_logs ADD COLUMN diagnostics_outcome TEXT;",
+      "ALTER TABLE repair_logs ADD COLUMN repair_categories TEXT;",
+      "ALTER TABLE users ADD COLUMN signature_url TEXT;",
+      "ALTER TABLE users ADD COLUMN delete_status VARCHAR(20) DEFAULT 'none';",
+      "ALTER TABLE users ADD COLUMN qc_affiliation VARCHAR(20) DEFAULT 'Arisa';",
+      "ALTER TABLE branches ADD COLUMN diagnostic_fee INTEGER DEFAULT 30000;"
     ];
 
-    for (const item of columnsToAdd) {
+    for (const q of directQueries) {
       try {
-        await queryInterface.addColumn(item.table, item.column, item.attr);
-      } catch (e) {}
+        await sequelize.query(q);
+        console.log('✅ Skema sukses:', q);
+      } catch (e) {
+        // Ignored if column already exists
+      }
     }
 
     try { await sequelize.query("UPDATE users SET is_active = false WHERE role = 'Technician' AND (branch_id IS NULL OR branch_id = 0);"); } catch (e) {}
