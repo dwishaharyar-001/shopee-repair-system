@@ -183,6 +183,11 @@ const createIntake = async (req, res) => {
       }
     }
 
+    // Ensure PostgreSQL table schema is up to date before processing intake
+    try { await sequelize.query("ALTER TABLE devices ADD COLUMN IF NOT EXISTS asset_type VARCHAR(100) DEFAULT 'Type A';"); } catch (e) {}
+    try { await sequelize.query("ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS bast_status VARCHAR(50) DEFAULT 'Pending_BAST';"); } catch (e) {}
+    try { await sequelize.query("ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS sea_approval_decision VARCHAR(50);"); } catch (e) {}
+
     // Check if Device already exists by Serial Number (with fail-safe fallback if column missing)
     let device = null;
     try {
