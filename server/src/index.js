@@ -200,50 +200,47 @@ const initDatabase = async () => {
     await sequelize.authenticate();
     console.log('✅ Koneksi database berhasil terhubung.');
     
-    // Migration queries safe execution (Run BEFORE sequelize.sync)
-    const safeQueries = [
-      'ALTER TABLE devices ADD COLUMN IF NOT EXISTS asset_type VARCHAR(100) DEFAULT \'Type A\';',
-      'ALTER TABLE "devices" ADD COLUMN IF NOT EXISTS "asset_type" VARCHAR(100) DEFAULT \'Type A\';',
-      'ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS bast_status VARCHAR(50) DEFAULT \'Pending_BAST\';',
-      'ALTER TABLE "service_orders" ADD COLUMN IF NOT EXISTS "bast_status" VARCHAR(50) DEFAULT \'Pending_BAST\';',
-      'ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS sea_approval_decision VARCHAR(50);',
-      'ALTER TABLE "service_orders" ADD COLUMN IF NOT EXISTS "sea_approval_decision" VARCHAR(50);',
-      'ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS assigned_tech_at TIMESTAMP;',
-      'ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS repair_started_at TIMESTAMP;',
-      'ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS repair_finished_at TIMESTAMP;',
-      'ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS qc1_started_at TIMESTAMP;',
-      'ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS qc1_finished_at TIMESTAMP;',
-      'ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS qc2_started_at TIMESTAMP;',
-      'ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS qc2_finished_at TIMESTAMP;',
-      'ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS diagnostic_started_at TIMESTAMP;',
-      'ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS diagnostic_submitted_at TIMESTAMP;',
-      'ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS budget_approved_at TIMESTAMP;',
-      'ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS budget_approved_by_user_id INTEGER;',
-      'ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS estimated_part_cost DECIMAL(12,2) DEFAULT 0;',
-      'ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS estimated_service_cost DECIMAL(12,2) DEFAULT 0;',
-      'ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS total_estimated_cost DECIMAL(12,2) DEFAULT 0;',
-      'ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS harvest_reason TEXT;',
-      'ALTER TABLE repair_logs ADD COLUMN IF NOT EXISTS duration_seconds INTEGER DEFAULT 0;',
-      'ALTER TABLE repair_logs ADD COLUMN IF NOT EXISTS diagnostics_outcome TEXT;',
-      'ALTER TABLE repair_logs ADD COLUMN IF NOT EXISTS repair_categories TEXT;',
-      'ALTER TABLE users ADD COLUMN IF NOT EXISTS signature_url TEXT;',
-      "ALTER TABLE users ADD COLUMN IF NOT EXISTS delete_status VARCHAR(20) DEFAULT 'none';",
-      "ALTER TABLE users ADD COLUMN IF NOT EXISTS qc_affiliation VARCHAR(20) DEFAULT 'Arisa';",
-      'ALTER TABLE branches ADD COLUMN IF NOT EXISTS diagnostic_fee INTEGER DEFAULT 30000;',
-      "UPDATE users SET is_active = false WHERE role = 'Technician' AND (branch_id IS NULL OR branch_id = 0);"
+    const queryInterface = sequelize.getQueryInterface();
+    const { DataTypes: DT } = require('sequelize');
+
+    const columnsToAdd = [
+      { table: 'devices', column: 'asset_type', attr: { type: DT.STRING(100), allowNull: true, defaultValue: 'Type A' } },
+      { table: 'service_orders', column: 'bast_status', attr: { type: DT.STRING(50), allowNull: true, defaultValue: 'Pending_BAST' } },
+      { table: 'service_orders', column: 'sea_approval_decision', attr: { type: DT.STRING(50), allowNull: true } },
+      { table: 'service_orders', column: 'assigned_tech_at', attr: { type: DT.DATE, allowNull: true } },
+      { table: 'service_orders', column: 'repair_started_at', attr: { type: DT.DATE, allowNull: true } },
+      { table: 'service_orders', column: 'repair_finished_at', attr: { type: DT.DATE, allowNull: true } },
+      { table: 'service_orders', column: 'qc1_started_at', attr: { type: DT.DATE, allowNull: true } },
+      { table: 'service_orders', column: 'qc1_finished_at', attr: { type: DT.DATE, allowNull: true } },
+      { table: 'service_orders', column: 'qc2_started_at', attr: { type: DT.DATE, allowNull: true } },
+      { table: 'service_orders', column: 'qc2_finished_at', attr: { type: DT.DATE, allowNull: true } },
+      { table: 'service_orders', column: 'diagnostic_started_at', attr: { type: DT.DATE, allowNull: true } },
+      { table: 'service_orders', column: 'diagnostic_submitted_at', attr: { type: DT.DATE, allowNull: true } },
+      { table: 'service_orders', column: 'budget_approved_at', attr: { type: DT.DATE, allowNull: true } },
+      { table: 'service_orders', column: 'budget_approved_by_user_id', attr: { type: DT.INTEGER, allowNull: true } },
+      { table: 'service_orders', column: 'estimated_part_cost', attr: { type: DT.DECIMAL(12, 2), defaultValue: 0.00 } },
+      { table: 'service_orders', column: 'estimated_service_cost', attr: { type: DT.DECIMAL(12, 2), defaultValue: 0.00 } },
+      { table: 'service_orders', column: 'total_estimated_cost', attr: { type: DT.DECIMAL(12, 2), defaultValue: 0.00 } },
+      { table: 'service_orders', column: 'harvest_reason', attr: { type: DT.TEXT, allowNull: true } },
+      { table: 'repair_logs', column: 'duration_seconds', attr: { type: DT.INTEGER, defaultValue: 0 } },
+      { table: 'repair_logs', column: 'diagnostics_outcome', attr: { type: DT.TEXT, allowNull: true } },
+      { table: 'repair_logs', column: 'repair_categories', attr: { type: DT.TEXT, allowNull: true } },
+      { table: 'users', column: 'signature_url', attr: { type: DT.TEXT, allowNull: true } },
+      { table: 'users', column: 'delete_status', attr: { type: DT.STRING(20), defaultValue: 'none' } },
+      { table: 'users', column: 'qc_affiliation', attr: { type: DT.STRING(20), defaultValue: 'Arisa' } },
+      { table: 'branches', column: 'diagnostic_fee', attr: { type: DT.INTEGER, defaultValue: 30000 } }
     ];
 
-    // Run safe migrations & alter tables to match current models
-    for (const q of safeQueries) {
+    for (const item of columnsToAdd) {
       try {
-        await sequelize.query(q);
-      } catch (e) {
-        console.error('Migration error for:', q, e.message);
-      }
+        await queryInterface.addColumn(item.table, item.column, item.attr);
+      } catch (e) {}
     }
 
-    await sequelize.sync({ alter: true });
-    console.log('✅ Skema tabel Sequelize & PostgreSQL berhasil di-sync (alter: true).');
+    try { await sequelize.query("UPDATE users SET is_active = false WHERE role = 'Technician' AND (branch_id IS NULL OR branch_id = 0);"); } catch (e) {}
+
+    await sequelize.sync();
+    console.log('✅ Skema tabel Sequelize & PostgreSQL berhasil di-sync.');
 
     await ensureDefaultBranches();
     await ensureDefaultPermissions();
