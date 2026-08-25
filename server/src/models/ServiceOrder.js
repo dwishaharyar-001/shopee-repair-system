@@ -47,7 +47,7 @@ const ServiceOrder = sequelize.define('ServiceOrder', {
   },
   bast_status: {
     type: DataTypes.STRING(50),
-    allowNull: false,
+    allowNull: true,
     defaultValue: 'Pending_BAST'
   },
   sea_approval_decision: {

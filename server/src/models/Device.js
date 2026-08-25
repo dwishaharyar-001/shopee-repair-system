@@ -27,7 +27,7 @@ const Device = sequelize.define('Device', {
   },
   asset_type: {
     type: DataTypes.STRING(100),
-    allowNull: false,
+    allowNull: true,
     defaultValue: 'Type A'
   },
   customer_id: {
