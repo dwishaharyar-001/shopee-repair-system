@@ -200,9 +200,7 @@ const initDatabase = async () => {
     await sequelize.authenticate();
     console.log('✅ Koneksi database berhasil terhubung.');
     
-    await sequelize.sync();
-
-    // Migration queries safe execution
+    // Migration queries safe execution (Run BEFORE sequelize.sync)
     const safeQueries = [
       'ALTER TABLE repair_logs ADD COLUMN IF NOT EXISTS duration_seconds INTEGER DEFAULT 0;',
       'ALTER TABLE repair_logs ADD COLUMN IF NOT EXISTS diagnostics_outcome TEXT;',
@@ -238,6 +236,7 @@ const initDatabase = async () => {
       try { await sequelize.query(q); } catch (e) {}
     }
 
+    await sequelize.sync();
     console.log('✅ Skema tabel Sequelize berhasil di-sync.');
 
     await ensureDefaultBranches();

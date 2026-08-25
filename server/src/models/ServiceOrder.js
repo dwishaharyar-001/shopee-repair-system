@@ -41,17 +41,17 @@ const ServiceOrder = sequelize.define('ServiceOrder', {
     allowNull: false
   },
   status: {
-    type: DataTypes.ENUM('Intake', 'Diagnostic_Phase', 'Diagnostic_Pending_Approval', 'Diagnostic_Revision', 'In Repair', 'QC1 Pending', 'Rework', 'QC2 Pending', 'Released', 'Harvested'),
+    type: DataTypes.STRING(50),
     allowNull: false,
     defaultValue: 'Intake'
   },
   bast_status: {
-    type: DataTypes.ENUM('Pending_BAST', 'Submitted_to_SEA', 'Approved_SEA', 'Revision_Requested'),
+    type: DataTypes.STRING(50),
     allowNull: false,
     defaultValue: 'Pending_BAST'
   },
   sea_approval_decision: {
-    type: DataTypes.ENUM('Full_Approve', 'Partial_Approve', 'Not_Approve_Harvest', 'Revision_Requested'),
+    type: DataTypes.STRING(50),
     allowNull: true
   },
   assigned_technician_id: {
