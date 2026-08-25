@@ -232,12 +232,17 @@ const initDatabase = async () => {
       "UPDATE users SET is_active = false WHERE role = 'Technician' AND (branch_id IS NULL OR branch_id = 0);"
     ];
 
+    // Run safe migrations & alter tables to match current models
     for (const q of safeQueries) {
-      try { await sequelize.query(q); } catch (e) {}
+      try {
+        await sequelize.query(q);
+      } catch (e) {
+        console.error('Migration error for:', q, e.message);
+      }
     }
 
-    await sequelize.sync();
-    console.log('✅ Skema tabel Sequelize berhasil di-sync.');
+    await sequelize.sync({ alter: true });
+    console.log('✅ Skema tabel Sequelize & PostgreSQL berhasil di-sync (alter: true).');
 
     await ensureDefaultBranches();
     await ensureDefaultPermissions();
