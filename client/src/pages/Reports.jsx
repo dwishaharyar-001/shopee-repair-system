@@ -555,16 +555,16 @@ const Reports = () => {
                           {getDeviceStatusBadge(item.status, item.is_done)}
                         </td>
                         <td className="py-3.5 px-4 text-center">
-                          <button
-                            onClick={() => {
-                              setSelectedBASTOrderId(item.id);
-                              setIsBASTModalOpen(true);
-                            }}
-                            className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-[11px] font-bold transition-all shadow-sm flex items-center space-x-1.5 mx-auto"
-                          >
-                            <Printer className="w-3.5 h-3.5 text-orange-400" />
-                            <span>Dokumen BAST</span>
-                          </button>
+                          {item.bast_number ? (
+                            <span className="inline-flex items-center space-x-1 px-2.5 py-1 bg-slate-100 text-slate-800 rounded-lg font-mono text-[11px] font-bold border border-slate-300">
+                              <FileText className="w-3.5 h-3.5 text-orange-500" />
+                              <span>{item.bast_number}</span>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center space-x-1 px-2 py-0.5 bg-amber-50 text-amber-800 rounded-lg text-[10px] font-bold border border-amber-200">
+                              <span>⏳ Belum Masuk BAST Batch</span>
+                            </span>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -575,16 +575,6 @@ const Reports = () => {
           </div>
         </div>
       )}
-
-      {/* Single Unit BAST Modal */}
-      <BASTDocumentModal
-        isOpen={isBASTModalOpen}
-        onClose={() => {
-          setIsBASTModalOpen(false);
-          setSelectedBASTOrderId(null);
-        }}
-        orderId={selectedBASTOrderId}
-      />
     </div>
   );
 };

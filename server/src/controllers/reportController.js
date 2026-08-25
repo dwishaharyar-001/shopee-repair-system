@@ -1,5 +1,5 @@
 const { Op } = require('sequelize');
-const { sequelize, ServiceOrder, Device, Customer, Technician, User, Branch, BranchCategoryPrice } = require('../models');
+const { sequelize, ServiceOrder, Device, Customer, Technician, User, Branch, BranchCategoryPrice, BastItem, BastDocument } = require('../models');
 
 // Status Groups
 const DONE_STATUSES = ['QC Passed', 'Ready for Pickup', 'Released'];
@@ -125,6 +125,11 @@ const getDeviceTaskReport = async (req, res) => {
           model: Technician,
           as: 'assignedTechnician',
           include: [{ model: User, as: 'user', attributes: ['id', 'full_name'] }]
+        },
+        {
+          model: BastItem,
+          as: 'bastItems',
+          include: [{ model: BastDocument, as: 'bastDocument', attributes: ['id', 'bast_number', 'bast_type', 'status'] }]
         }
       ],
       order: [['created_at', 'DESC']]
@@ -155,6 +160,9 @@ const getDeviceTaskReport = async (req, res) => {
 
     const formattedOrders = filteredOrders.map(o => {
       const isDone = DONE_STATUSES.includes(o.status);
+      const latestBastItem = o.bastItems && o.bastItems.length > 0 ? o.bastItems[o.bastItems.length - 1] : null;
+      const latestBastDoc = latestBastItem ? latestBastItem.bastDocument : null;
+
       return {
         id: o.id,
         service_id: o.service_id,
@@ -167,6 +175,9 @@ const getDeviceTaskReport = async (req, res) => {
         branch: o.branch,
         status: o.status,
         is_done: isDone,
+        bast_number: latestBastDoc ? latestBastDoc.bast_number : null,
+        bast_type: latestBastDoc ? latestBastDoc.bast_type : null,
+        bast_doc_status: latestBastDoc ? latestBastDoc.status : null,
         created_at: o.created_at,
         updated_at: o.updated_at
       };
