@@ -1,5 +1,5 @@
 const { Op } = require('sequelize');
-const { Device, ServiceOrder, Customer, Technician, User, Branch } = require('../models');
+const { sequelize, Device, ServiceOrder, Customer, Technician, User, Branch } = require('../models');
 
 // Helper to generate padded code
 const generateCode = (prefix, num) => {
