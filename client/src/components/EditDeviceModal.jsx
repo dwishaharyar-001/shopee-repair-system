@@ -273,15 +273,34 @@ const EditDeviceModal = ({ isOpen, onClose, order, onSuccess }) => {
 
             {/* Assigned Technician */}
             <div className="sm:col-span-2">
-              <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center space-x-1">
-                <Wrench className="w-3.5 h-3.5 text-emerald-600" />
-                <span>Teknisi Penanggung Jawab</span>
+              <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center justify-between">
+                <span className="flex items-center space-x-1">
+                  <Wrench className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Teknisi Penanggung Jawab</span>
+                </span>
+                {order?.bast_status === 'Approved_SEA' || order?.bast_status === 'Verified_By_SEA' ? (
+                  <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded border border-emerald-300">
+                    ✓ BAST Terverifikasi SEA (Distribusi Terbuka)
+                  </span>
+                ) : (
+                  <span className="text-[10px] bg-amber-100 text-amber-800 font-bold px-2 py-0.5 rounded border border-amber-300">
+                    🔒 Terkunci (Menunggu Verifikasi BAST SEA)
+                  </span>
+                )}
               </label>
+
+              {(order?.bast_status !== 'Approved_SEA' && order?.bast_status !== 'Verified_By_SEA') && (
+                <div className="mb-2 p-2.5 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 text-[11px] font-medium">
+                  <strong>Catatan Workflow:</strong> Unit ini harus masuk dokumen BAST (Shopee → Arisa) dan diverifikasi oleh QC SEA terlebih dahulu sebelum dapat didistribusikan ke Teknisi.
+                </div>
+              )}
+
               <select
                 name="assigned_technician_id"
                 value={formData.assigned_technician_id}
                 onChange={handleChange}
-                className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-medium text-slate-800 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                disabled={order?.bast_status !== 'Approved_SEA' && order?.bast_status !== 'Verified_By_SEA'}
+                className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-medium text-slate-800 focus:ring-2 focus:ring-emerald-500 focus:outline-none disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 <option value="">-- Belum Ditugaskan (Unassigned) --</option>
                 {technicians

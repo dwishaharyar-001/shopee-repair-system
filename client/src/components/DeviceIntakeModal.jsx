@@ -25,7 +25,6 @@ const DeviceIntakeModal = ({ isOpen, onClose, onSuccess }) => {
     model: '',
     asset_type: 'Type A',
     fault_description: '',
-    assigned_technician_id: '',
     notes: ''
   });
 
@@ -124,7 +123,6 @@ const DeviceIntakeModal = ({ isOpen, onClose, onSuccess }) => {
           model: '',
           asset_type: 'Type A',
           fault_description: '',
-          assigned_technician_id: '',
           notes: ''
         });
       } else {
@@ -400,32 +398,6 @@ const DeviceIntakeModal = ({ isOpen, onClose, onSuccess }) => {
               ></textarea>
             </div>
 
-            {/* Assigned Technician */}
-            <div className="sm:col-span-2">
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Tugaskan Teknisi (Opsional)
-              </label>
-              <select
-                name="assigned_technician_id"
-                value={formData.assigned_technician_id}
-                onChange={handleChange}
-                className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-cyan-500 focus:outline-none"
-              >
-                <option value="">-- Pilih Teknisi (Atau Biarkan Unassigned) --</option>
-                {technicians
-                  .filter(t => t.is_active && t.branch_id && String(t.branch_id) === String(formData.branch_id))
-                  .map(t => {
-                    const prof = t.technicianProfile || t.technician || {};
-                    const skill = prof.skill_level ? ` - ${prof.skill_level}` : '';
-                    const empCode = prof.employee_code || `TECH-${String(t.id).padStart(3, '0')}`;
-                    return (
-                      <option key={prof.id || t.id} value={prof.id || t.id}>
-                        🛠️ {t.full_name} ({empCode}{skill})
-                      </option>
-                    );
-                  })}
-              </select>
-            </div>
           </div>
 
           {/* Buttons */}

@@ -264,8 +264,8 @@ const createIntake = async (req, res) => {
       branch_id: targetBranchId,
       fault_description,
       status: 'Intake',
-      assigned_technician_id: assigned_technician_id || null,
-      assigned_tech_at: assigned_technician_id ? new Date() : null,
+      assigned_technician_id: null,
+      assigned_tech_at: null,
       received_by_user_id: req.user ? req.user.id : null,
       intake_date: new Date(),
       notes: notes || null
