@@ -1,4 +1,5 @@
 const { 
+  sequelize,
   ServiceOrder, 
   DiagnosticPlanItem, 
   Part, 
@@ -23,6 +24,11 @@ const submitDiagnosticPlan = async (req, res) => {
       selected_categories = [], 
       planned_parts = [] 
     } = req.body;
+
+    // Convert PostgreSQL ENUM status to VARCHAR(50) if needed
+    try { await sequelize.query("ALTER TABLE service_orders ALTER COLUMN status TYPE VARCHAR(50) USING status::text;"); } catch (e) {}
+    try { await sequelize.query('ALTER TABLE "service_orders" ALTER COLUMN "status" TYPE VARCHAR(50) USING status::text;'); } catch (e) {}
+    try { await sequelize.query("DROP TYPE IF EXISTS enum_service_orders_status CASCADE;"); } catch (e) {}
 
     const order = await ServiceOrder.findByPk(id, {
       include: [{ model: Branch, as: 'branch' }]

@@ -204,6 +204,9 @@ const initDatabase = async () => {
     console.log('✅ Skema tabel dasar Sequelize berhasil di-sync.');
 
     const directQueries = [
+      "ALTER TABLE service_orders ALTER COLUMN status TYPE VARCHAR(50) USING status::text;",
+      'ALTER TABLE "service_orders" ALTER COLUMN "status" TYPE VARCHAR(50) USING status::text;',
+      "DROP TYPE IF EXISTS enum_service_orders_status CASCADE;",
       "ALTER TABLE devices ADD COLUMN IF NOT EXISTS asset_type VARCHAR(100) DEFAULT 'Type A';",
       "ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS bast_status VARCHAR(50) DEFAULT 'Pending_BAST';",
       "ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS sea_approval_decision VARCHAR(50);",
