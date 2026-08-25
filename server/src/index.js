@@ -200,46 +200,47 @@ const initDatabase = async () => {
     await sequelize.authenticate();
     console.log('✅ Koneksi database berhasil terhubung.');
     
+    await sequelize.sync();
+    console.log('✅ Skema tabel dasar Sequelize berhasil di-sync.');
+
     const directQueries = [
-      "ALTER TABLE devices ADD COLUMN asset_type VARCHAR(100) DEFAULT 'Type A';",
-      "ALTER TABLE service_orders ADD COLUMN bast_status VARCHAR(50) DEFAULT 'Pending_BAST';",
-      "ALTER TABLE service_orders ADD COLUMN sea_approval_decision VARCHAR(50);",
-      "ALTER TABLE service_orders ADD COLUMN assigned_tech_at TIMESTAMP;",
-      "ALTER TABLE service_orders ADD COLUMN repair_started_at TIMESTAMP;",
-      "ALTER TABLE service_orders ADD COLUMN repair_finished_at TIMESTAMP;",
-      "ALTER TABLE service_orders ADD COLUMN qc1_started_at TIMESTAMP;",
-      "ALTER TABLE service_orders ADD COLUMN qc1_finished_at TIMESTAMP;",
-      "ALTER TABLE service_orders ADD COLUMN qc2_started_at TIMESTAMP;",
-      "ALTER TABLE service_orders ADD COLUMN qc2_finished_at TIMESTAMP;",
-      "ALTER TABLE service_orders ADD COLUMN diagnostic_started_at TIMESTAMP;",
-      "ALTER TABLE service_orders ADD COLUMN diagnostic_submitted_at TIMESTAMP;",
-      "ALTER TABLE service_orders ADD COLUMN budget_approved_at TIMESTAMP;",
-      "ALTER TABLE service_orders ADD COLUMN budget_approved_by_user_id INTEGER;",
-      "ALTER TABLE service_orders ADD COLUMN estimated_part_cost DECIMAL(12,2) DEFAULT 0;",
-      "ALTER TABLE service_orders ADD COLUMN estimated_service_cost DECIMAL(12,2) DEFAULT 0;",
-      "ALTER TABLE service_orders ADD COLUMN total_estimated_cost DECIMAL(12,2) DEFAULT 0;",
-      "ALTER TABLE service_orders ADD COLUMN harvest_reason TEXT;",
-      "ALTER TABLE repair_logs ADD COLUMN duration_seconds INTEGER DEFAULT 0;",
-      "ALTER TABLE repair_logs ADD COLUMN diagnostics_outcome TEXT;",
-      "ALTER TABLE repair_logs ADD COLUMN repair_categories TEXT;",
-      "ALTER TABLE users ADD COLUMN signature_url TEXT;",
-      "ALTER TABLE users ADD COLUMN delete_status VARCHAR(20) DEFAULT 'none';",
-      "ALTER TABLE users ADD COLUMN qc_affiliation VARCHAR(20) DEFAULT 'Arisa';",
-      "ALTER TABLE branches ADD COLUMN diagnostic_fee INTEGER DEFAULT 30000;"
+      "ALTER TABLE devices ADD COLUMN IF NOT EXISTS asset_type VARCHAR(100) DEFAULT 'Type A';",
+      "ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS bast_status VARCHAR(50) DEFAULT 'Pending_BAST';",
+      "ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS sea_approval_decision VARCHAR(50);",
+      "ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS assigned_tech_at TIMESTAMP;",
+      "ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS repair_started_at TIMESTAMP;",
+      "ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS repair_finished_at TIMESTAMP;",
+      "ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS qc1_started_at TIMESTAMP;",
+      "ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS qc1_finished_at TIMESTAMP;",
+      "ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS qc2_started_at TIMESTAMP;",
+      "ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS qc2_finished_at TIMESTAMP;",
+      "ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS diagnostic_started_at TIMESTAMP;",
+      "ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS diagnostic_submitted_at TIMESTAMP;",
+      "ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS budget_approved_at TIMESTAMP;",
+      "ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS budget_approved_by_user_id INTEGER;",
+      "ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS estimated_part_cost DECIMAL(12,2) DEFAULT 0;",
+      "ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS estimated_service_cost DECIMAL(12,2) DEFAULT 0;",
+      "ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS total_estimated_cost DECIMAL(12,2) DEFAULT 0;",
+      "ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS harvest_reason TEXT;",
+      "ALTER TABLE repair_logs ADD COLUMN IF NOT EXISTS duration_seconds INTEGER DEFAULT 0;",
+      "ALTER TABLE repair_logs ADD COLUMN IF NOT EXISTS diagnostics_outcome TEXT;",
+      "ALTER TABLE repair_logs ADD COLUMN IF NOT EXISTS repair_categories TEXT;",
+      "ALTER TABLE users ADD COLUMN IF NOT EXISTS signature_url TEXT;",
+      "ALTER TABLE users ADD COLUMN IF NOT EXISTS delete_status VARCHAR(20) DEFAULT 'none';",
+      "ALTER TABLE users ADD COLUMN IF NOT EXISTS qc_affiliation VARCHAR(20) DEFAULT 'Arisa';",
+      "ALTER TABLE branches ADD COLUMN IF NOT EXISTS diagnostic_fee INTEGER DEFAULT 30000;"
     ];
 
     for (const q of directQueries) {
       try {
         await sequelize.query(q);
-        console.log('✅ Skema sukses:', q);
+        console.log('✅ Migrasi skema sukses:', q);
       } catch (e) {
-        // Ignored if column already exists
+        console.error('Migration info:', q, '->', e.message);
       }
     }
 
     try { await sequelize.query("UPDATE users SET is_active = false WHERE role = 'Technician' AND (branch_id IS NULL OR branch_id = 0);"); } catch (e) {}
-
-    await sequelize.sync();
     console.log('✅ Skema tabel Sequelize & PostgreSQL berhasil di-sync.');
 
     await ensureDefaultBranches();

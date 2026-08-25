@@ -231,7 +231,7 @@ const createIntake = async (req, res) => {
           brand: brand.trim(),
           model: model.trim(),
           customer_id
-        });
+        }, { fields: ['device_id', 'serial_number', 'brand', 'model', 'customer_id'] });
       }
     } else {
       device.brand = brand.trim();
