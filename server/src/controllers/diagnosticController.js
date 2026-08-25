@@ -128,21 +128,41 @@ const submitDiagnosticPlan = async (req, res) => {
  */
 const getPendingDiagnosticApprovals = async (req, res) => {
   try {
-    const orders = await ServiceOrder.findAll({
-      where: { status: 'Diagnostic_Pending_Approval' },
-      include: [
-        { model: Device, as: 'device' },
-        { model: Customer, as: 'customer' },
-        { model: Branch, as: 'branch' },
-        { model: Technician, as: 'assignedTechnician', include: [{ model: User, as: 'user' }] },
-        {
-          model: DiagnosticPlanItem,
-          as: 'diagnosticPlanItems',
-          include: [{ model: Part, as: 'part' }]
-        }
-      ],
-      order: [['diagnostic_submitted_at', 'ASC']]
-    });
+    try { await sequelize.query("ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'Intake';"); } catch (e) {}
+
+    let orders = [];
+    try {
+      orders = await ServiceOrder.findAll({
+        where: { status: 'Diagnostic_Pending_Approval' },
+        include: [
+          { model: Device, as: 'device' },
+          { model: Customer, as: 'customer' },
+          { model: Branch, as: 'branch' },
+          { model: Technician, as: 'assignedTechnician', include: [{ model: User, as: 'user' }] },
+          {
+            model: DiagnosticPlanItem,
+            as: 'diagnosticPlanItems',
+            include: [{ model: Part, as: 'part' }]
+          }
+        ],
+        order: [['diagnostic_submitted_at', 'ASC']]
+      });
+    } catch (dbErr) {
+      const allOrders = await ServiceOrder.findAll({
+        include: [
+          { model: Device, as: 'device' },
+          { model: Customer, as: 'customer' },
+          { model: Branch, as: 'branch' },
+          { model: Technician, as: 'assignedTechnician', include: [{ model: User, as: 'user' }] },
+          {
+            model: DiagnosticPlanItem,
+            as: 'diagnosticPlanItems',
+            include: [{ model: Part, as: 'part' }]
+          }
+        ]
+      });
+      orders = allOrders.filter(o => o.status === 'Diagnostic_Pending_Approval');
+    }
 
     return res.status(200).json({
       success: true,

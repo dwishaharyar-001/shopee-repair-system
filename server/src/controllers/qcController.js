@@ -1,5 +1,5 @@
 const { Op } = require('sequelize');
-const { QCCheckpoint, ServiceOrder, Device, Customer, Technician, User, RepairLog } = require('../models');
+const { sequelize, QCCheckpoint, ServiceOrder, Device, Customer, Technician, User, RepairLog } = require('../models');
 
 // Helper to generate QC Code
 const generateQCCode = (num) => {
@@ -15,24 +15,47 @@ const getQCPendingQueue = async (req, res) => {
     if (type === 'qc1') statusFilter = ['QC1 Pending'];
     if (type === 'qc2') statusFilter = ['QC2 Pending'];
 
-    const orders = await ServiceOrder.findAll({
-      where: { status: statusFilter },
-      include: [
-        { model: Device, as: 'device' },
-        { model: Customer, as: 'customer', attributes: ['id', 'customer_code', 'name'] },
-        {
-          model: Technician,
-          as: 'assignedTechnician',
-          include: [{ model: User, as: 'user', attributes: ['id', 'full_name'] }]
-        },
-        {
-          model: QCCheckpoint,
-          as: 'qcCheckpoints',
-          include: [{ model: User, as: 'inspector', attributes: ['id', 'full_name', 'role'] }]
-        }
-      ],
-      order: [['updated_at', 'DESC']]
-    });
+    try { await sequelize.query("ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'Intake';"); } catch (e) {}
+
+    let orders = [];
+    try {
+      orders = await ServiceOrder.findAll({
+        where: { status: statusFilter },
+        include: [
+          { model: Device, as: 'device' },
+          { model: Customer, as: 'customer', attributes: ['id', 'customer_code', 'name'] },
+          {
+            model: Technician,
+            as: 'assignedTechnician',
+            include: [{ model: User, as: 'user', attributes: ['id', 'full_name'] }]
+          },
+          {
+            model: QCCheckpoint,
+            as: 'qcCheckpoints',
+            include: [{ model: User, as: 'inspector', attributes: ['id', 'full_name', 'role'] }]
+          }
+        ],
+        order: [['updated_at', 'DESC']]
+      });
+    } catch (dbErr) {
+      const allOrders = await ServiceOrder.findAll({
+        include: [
+          { model: Device, as: 'device' },
+          { model: Customer, as: 'customer', attributes: ['id', 'customer_code', 'name'] },
+          {
+            model: Technician,
+            as: 'assignedTechnician',
+            include: [{ model: User, as: 'user', attributes: ['id', 'full_name'] }]
+          },
+          {
+            model: QCCheckpoint,
+            as: 'qcCheckpoints',
+            include: [{ model: User, as: 'inspector', attributes: ['id', 'full_name', 'role'] }]
+          }
+        ]
+      });
+      orders = allOrders.filter(o => statusFilter.includes(o.status));
+    }
 
     return res.status(200).json({ success: true, data: orders });
   } catch (error) {
