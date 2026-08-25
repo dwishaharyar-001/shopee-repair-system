@@ -186,6 +186,18 @@ const createIntake = async (req, res) => {
     // Check if Device already exists by Serial Number
     let device = await Device.findOne({ where: { serial_number: serial_number.trim() } });
 
+    let cleanAssetType = 'Type A';
+    if (asset_type) {
+      const s = String(asset_type).trim();
+      if (s.startsWith('Type A')) cleanAssetType = 'Type A';
+      else if (s.startsWith('Type B')) cleanAssetType = 'Type B';
+      else if (s.startsWith('Type C')) cleanAssetType = 'Type C';
+      else if (s.startsWith('Type D')) cleanAssetType = 'Type D';
+      else if (s.startsWith('Type E')) cleanAssetType = 'Type E';
+      else if (s.startsWith('Type F')) cleanAssetType = 'Type F';
+      else cleanAssetType = s;
+    }
+
     if (!device) {
       // Create new Device Master
       const deviceCount = await Device.count();
@@ -196,9 +208,14 @@ const createIntake = async (req, res) => {
         serial_number: serial_number.trim(),
         brand: brand.trim(),
         model: model.trim(),
-        asset_type,
+        asset_type: cleanAssetType,
         customer_id
       });
+    } else {
+      device.brand = brand.trim();
+      device.model = model.trim();
+      device.asset_type = cleanAssetType;
+      await device.save();
     }
 
     // Count order sequence for this specific branch

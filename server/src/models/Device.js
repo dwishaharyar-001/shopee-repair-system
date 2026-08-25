@@ -26,7 +26,7 @@ const Device = sequelize.define('Device', {
     allowNull: false
   },
   asset_type: {
-    type: DataTypes.ENUM('Type A', 'Type B', 'Type C', 'Type D', 'Type E', 'Type F'),
+    type: DataTypes.STRING(100),
     allowNull: false,
     defaultValue: 'Type A'
   },

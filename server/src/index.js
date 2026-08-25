@@ -228,6 +228,9 @@ const initDatabase = async () => {
       'ALTER TABLE service_orders ADD COLUMN total_estimated_cost DECIMAL(12,2) DEFAULT 0;',
       'ALTER TABLE service_orders ADD COLUMN harvest_reason TEXT;',
       'ALTER TABLE branches ADD COLUMN diagnostic_fee INTEGER DEFAULT 30000;',
+      'ALTER TABLE devices ALTER COLUMN asset_type TYPE VARCHAR(100) USING asset_type::text;',
+      "ALTER TABLE devices ALTER COLUMN asset_type SET DEFAULT 'Type A';",
+      'DROP TYPE IF EXISTS enum_devices_asset_type CASCADE;',
       "UPDATE users SET is_active = false WHERE role = 'Technician' AND (branch_id IS NULL OR branch_id = 0);"
     ];
 
