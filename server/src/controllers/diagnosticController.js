@@ -25,10 +25,10 @@ const submitDiagnosticPlan = async (req, res) => {
       planned_parts = [] 
     } = req.body;
 
-    // Convert PostgreSQL ENUM status to VARCHAR(50) if needed
+    // Ensure PostgreSQL table status column exists as VARCHAR(50)
+    try { await sequelize.query("ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'Intake';"); } catch (e) {}
+    try { await sequelize.query('ALTER TABLE "service_orders" ADD COLUMN IF NOT EXISTS "status" VARCHAR(50) DEFAULT \'Intake\';'); } catch (e) {}
     try { await sequelize.query("ALTER TABLE service_orders ALTER COLUMN status TYPE VARCHAR(50) USING status::text;"); } catch (e) {}
-    try { await sequelize.query('ALTER TABLE "service_orders" ALTER COLUMN "status" TYPE VARCHAR(50) USING status::text;'); } catch (e) {}
-    try { await sequelize.query("DROP TYPE IF EXISTS enum_service_orders_status CASCADE;"); } catch (e) {}
 
     const order = await ServiceOrder.findByPk(id, {
       include: [{ model: Branch, as: 'branch' }]
