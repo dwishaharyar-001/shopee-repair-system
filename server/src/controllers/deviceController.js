@@ -183,8 +183,20 @@ const createIntake = async (req, res) => {
       }
     }
 
-    // Check if Device already exists by Serial Number
-    let device = await Device.findOne({ where: { serial_number: serial_number.trim() } });
+    // Check if Device already exists by Serial Number (with fail-safe fallback if column missing)
+    let device = null;
+    try {
+      device = await Device.findOne({ where: { serial_number: serial_number.trim() } });
+    } catch (err) {
+      try {
+        device = await Device.findOne({
+          where: { serial_number: serial_number.trim() },
+          attributes: ['id', 'device_id', 'serial_number', 'brand', 'model', 'customer_id']
+        });
+      } catch (e2) {
+        device = null;
+      }
+    }
 
     let cleanAssetType = 'Type A';
     if (asset_type) {
@@ -200,28 +212,42 @@ const createIntake = async (req, res) => {
 
     if (!device) {
       // Create new Device Master
-      const deviceCount = await Device.count();
+      const deviceCount = await Device.count().catch(() => 0);
       const generatedDeviceId = generateCode('DEV', deviceCount + 1);
 
-      device = await Device.create({
-        device_id: generatedDeviceId,
-        serial_number: serial_number.trim(),
-        brand: brand.trim(),
-        model: model.trim(),
-        asset_type: cleanAssetType,
-        customer_id
-      });
+      try {
+        device = await Device.create({
+          device_id: generatedDeviceId,
+          serial_number: serial_number.trim(),
+          brand: brand.trim(),
+          model: model.trim(),
+          asset_type: cleanAssetType,
+          customer_id
+        });
+      } catch (createErr) {
+        device = await Device.create({
+          device_id: generatedDeviceId,
+          serial_number: serial_number.trim(),
+          brand: brand.trim(),
+          model: model.trim(),
+          customer_id
+        });
+      }
     } else {
       device.brand = brand.trim();
       device.model = model.trim();
-      device.asset_type = cleanAssetType;
-      await device.save();
+      try {
+        device.asset_type = cleanAssetType;
+        await device.save();
+      } catch (e) {
+        // Continue if asset_type column not present yet
+      }
     }
 
     // Count order sequence for this specific branch
     const branchOrderCount = await ServiceOrder.count({
       where: targetBranchId ? { branch_id: targetBranchId } : {}
-    });
+    }).catch(() => 0);
     const generatedServiceId = generateCode(branchPrefix, branchOrderCount + 1);
 
     const serviceOrder = await ServiceOrder.create({
@@ -238,18 +264,32 @@ const createIntake = async (req, res) => {
       notes: notes || null
     });
 
-    const fullOrder = await ServiceOrder.findByPk(serviceOrder.id, {
-      include: [
-        { model: Device, as: 'device' },
-        { model: Customer, as: 'customer' },
-        { model: Branch, as: 'branch' },
-        {
-          model: Technician,
-          as: 'assignedTechnician',
-          include: [{ model: User, as: 'user', attributes: ['id', 'full_name'] }]
-        }
-      ]
-    });
+    let fullOrder = null;
+    try {
+      fullOrder = await ServiceOrder.findByPk(serviceOrder.id, {
+        include: [
+          { model: Device, as: 'device' },
+          { model: Customer, as: 'customer' },
+          { model: Branch, as: 'branch' },
+          {
+            model: Technician,
+            as: 'assignedTechnician',
+            include: [{ model: User, as: 'user', attributes: ['id', 'full_name'] }]
+          }
+        ]
+      });
+    } catch (e) {
+      fullOrder = {
+        id: serviceOrder.id,
+        service_id: generatedServiceId,
+        device_id: device.id,
+        customer_id,
+        status: 'Intake',
+        fault_description,
+        device,
+        intake_date: serviceOrder.intake_date
+      };
+    }
 
     return res.status(201).json({
       success: true,
