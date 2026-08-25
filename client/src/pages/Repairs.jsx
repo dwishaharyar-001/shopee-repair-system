@@ -542,6 +542,44 @@ const Repairs = () => {
                 )}
 
                 <div className="p-6 space-y-6">
+                  {/* QC Audit & Rework Notes Banner for Technicians */}
+                  {(isRework || (item.qcCheckpoints && item.qcCheckpoints.length > 0)) && (
+                    <div className="p-4 bg-amber-50 border-2 border-amber-300 rounded-2xl space-y-2">
+                      <div className="flex items-center justify-between text-xs font-bold text-amber-950">
+                        <span className="flex items-center space-x-1.5">
+                          <AlertOctagon className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                          <span>Catatan Audit QC ({item.qcCheckpoints && item.qcCheckpoints.length > 0 ? item.qcCheckpoints[item.qcCheckpoints.length - 1].checkpoint_type : 'QC Inspection'}):</span>
+                        </span>
+                        {item.qcCheckpoints && item.qcCheckpoints.length > 0 && (
+                          <span className="font-mono text-[10px] bg-amber-200 px-2 py-0.5 rounded text-amber-900 font-extrabold">
+                            Inspector: {item.qcCheckpoints[item.qcCheckpoints.length - 1].inspector?.full_name || 'QC Team'} ({item.qcCheckpoints[item.qcCheckpoints.length - 1].overall_result})
+                          </span>
+                        )}
+                      </div>
+
+                      {item.qcCheckpoints && item.qcCheckpoints.length > 0 && item.qcCheckpoints[item.qcCheckpoints.length - 1].failure_reason && (
+                        <div className="text-xs text-amber-950 font-medium">
+                          <strong className="text-amber-900">Penyebab Gagal Audit QC:</strong> {item.qcCheckpoints[item.qcCheckpoints.length - 1].failure_reason}
+                        </div>
+                      )}
+
+                      {item.qcCheckpoints && item.qcCheckpoints.length > 0 && item.qcCheckpoints[item.qcCheckpoints.length - 1].rework_notes && (
+                        <div className="text-xs text-slate-800 bg-white p-3 rounded-xl border border-amber-300 font-mono font-semibold">
+                          <strong className="text-rose-700 block mb-0.5">⚠️ Catatan Rework & Instruksi Perbaikan:</strong>
+                          {item.qcCheckpoints[item.qcCheckpoints.length - 1].rework_notes}
+                        </div>
+                      )}
+
+                      {/* Fallback to order.notes if notes contain QC comments */}
+                      {(!item.qcCheckpoints || item.qcCheckpoints.length === 0) && item.notes && (
+                        <div className="text-xs text-slate-800 bg-white p-3 rounded-xl border border-amber-300 font-mono font-semibold">
+                          <strong className="text-rose-700 block mb-0.5">⚠️ Catatan Rework / Audit QC:</strong>
+                          {item.notes}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   {/* Top Bar Info */}
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-100 pb-4">
                     <div>

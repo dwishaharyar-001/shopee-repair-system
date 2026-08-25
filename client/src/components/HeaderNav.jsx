@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Search, 
   Bell, 
@@ -18,6 +19,15 @@ const HeaderNav = () => {
   const { user, logout } = useAuth();
   const { toggleSidebar, isCollapsed } = useLayout();
   const [isSigModalOpen, setIsSigModalOpen] = useState(false);
+  const [globalSearch, setGlobalSearch] = useState('');
+  const navigate = useNavigate();
+
+  const handleGlobalSearchSubmit = (e) => {
+    e.preventDefault();
+    if (globalSearch.trim()) {
+      navigate(`/devices?search=${encodeURIComponent(globalSearch.trim())}`);
+    }
+  };
 
   const getRoleBadgeColor = (role) => {
     switch (role) {
@@ -55,14 +65,25 @@ const HeaderNav = () => {
             <span className="lg:hidden font-bold text-xs sm:text-sm text-slate-800 tracking-tight">
               Shopee Repair
             </span>
-            <div className="hidden md:block relative w-60 lg:w-80">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Cari Serial Number, Asset, atau Tiket..."
-                className="w-full pl-9 pr-4 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all text-slate-700 placeholder-slate-400"
-              />
-            </div>
+            <form onSubmit={handleGlobalSearchSubmit} className="hidden md:flex items-center space-x-1.5 relative w-64 lg:w-96">
+              <div className="relative flex-1">
+                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  value={globalSearch}
+                  onChange={(e) => setGlobalSearch(e.target.value)}
+                  placeholder="Cari Serial Number, Asset ID, atau Tiket..."
+                  className="w-full pl-9 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all text-slate-700 placeholder-slate-400 font-medium"
+                />
+              </div>
+              <button
+                type="submit"
+                className="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center space-x-1 flex-shrink-0 cursor-pointer"
+              >
+                <Search className="w-3.5 h-3.5" />
+                <span>Cari</span>
+              </button>
+            </form>
           </div>
         </div>
 

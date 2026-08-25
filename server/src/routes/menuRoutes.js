@@ -24,8 +24,8 @@ router.get('/my-permissions', getMyPermissions);
 // Get matrix of all permissions (Admin & Coordinator)
 router.get('/permissions', requireRole('Admin', 'Coordinator'), getAllPermissions);
 
-// Update role menu access (Admin only)
-router.put('/permissions', requireRole('Admin'), updatePermissions);
+// Update role menu access (Admin & Coordinator)
+router.put('/permissions', requireRole('Admin', 'Coordinator'), updatePermissions);
 
 // Get list of users (Admin & Coordinator)
 router.get('/users', requireRole('Admin', 'Coordinator'), getAllUsers);

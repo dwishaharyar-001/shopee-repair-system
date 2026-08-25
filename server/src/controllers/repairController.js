@@ -1,5 +1,5 @@
 const { Op } = require('sequelize');
-const { ServiceOrder, Device, Customer, Technician, User, RepairLog, Part, PartConsumed, BrokenPart } = require('../models');
+const { ServiceOrder, Device, Customer, Technician, User, RepairLog, Part, PartConsumed, BrokenPart, QCCheckpoint } = require('../models');
 
 // Helper generator for repair log code
 const generateRepairCode = (num) => {
@@ -54,6 +54,11 @@ const getWorkQueue = async (req, res) => {
           model: BrokenPart,
           as: 'brokenParts',
           include: [{ model: User, as: 'reportedBy', attributes: ['id', 'full_name'] }]
+        },
+        {
+          model: QCCheckpoint,
+          as: 'qcCheckpoints',
+          include: [{ model: User, as: 'inspector', attributes: ['id', 'full_name', 'role', 'qc_affiliation'] }]
         }
       ],
       order: [

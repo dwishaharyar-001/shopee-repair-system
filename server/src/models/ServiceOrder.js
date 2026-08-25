@@ -41,13 +41,9 @@ const ServiceOrder = sequelize.define('ServiceOrder', {
     allowNull: false
   },
   status: {
-    type: DataTypes.VIRTUAL,
-    get() {
-      return this.getDataValue('status') || 'Intake';
-    },
-    set(val) {
-      this.setDataValue('status', val || 'Intake');
-    }
+    type: DataTypes.STRING(50),
+    allowNull: false,
+    defaultValue: 'Intake'
   },
   bast_status: {
     type: DataTypes.VIRTUAL,

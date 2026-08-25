@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { 
   Laptop, 
   Search, 
@@ -22,6 +23,9 @@ import EditDeviceModal from '../components/EditDeviceModal';
 import CustomerModal from '../components/CustomerModal';
 
 const Devices = () => {
+  const [searchParams] = useSearchParams();
+  const urlSearch = searchParams.get('search') || '';
+
   const [orders, setOrders] = useState([]);
   const [branches, setBranches] = useState([]);
   const [stats, setStats] = useState({ totalCount: 0, intakeCount: 0, inRepairCount: 0, qcPendingCount: 0, releasedCount: 0 });
@@ -29,10 +33,16 @@ const Devices = () => {
   const [toastMessage, setToastMessage] = useState('');
 
   // Filters state
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState(urlSearch);
   const [selectedStatus, setSelectedStatus] = useState('');
   const [selectedAssetType, setSelectedAssetType] = useState('');
   const [selectedBranch, setSelectedBranch] = useState('');
+
+  useEffect(() => {
+    if (urlSearch !== undefined) {
+      setSearch(urlSearch);
+    }
+  }, [urlSearch]);
 
   // Modals state
   const [isIntakeOpen, setIsIntakeOpen] = useState(false);
@@ -48,7 +58,7 @@ const Devices = () => {
 
   useEffect(() => {
     fetchOrders();
-  }, [selectedStatus, selectedAssetType, selectedBranch]);
+  }, [search, selectedStatus, selectedAssetType, selectedBranch]);
 
   const fetchBranches = async () => {
     try {
