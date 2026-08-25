@@ -202,9 +202,12 @@ const initDatabase = async () => {
     
     // Migration queries safe execution (Run BEFORE sequelize.sync)
     const safeQueries = [
-      "ALTER TABLE devices ADD COLUMN IF NOT EXISTS asset_type VARCHAR(100) DEFAULT 'Type A';",
-      "ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS bast_status VARCHAR(50) DEFAULT 'Pending_BAST';",
-      "ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS sea_approval_decision VARCHAR(50);",
+      'ALTER TABLE devices ADD COLUMN IF NOT EXISTS asset_type VARCHAR(100) DEFAULT \'Type A\';',
+      'ALTER TABLE "devices" ADD COLUMN IF NOT EXISTS "asset_type" VARCHAR(100) DEFAULT \'Type A\';',
+      'ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS bast_status VARCHAR(50) DEFAULT \'Pending_BAST\';',
+      'ALTER TABLE "service_orders" ADD COLUMN IF NOT EXISTS "bast_status" VARCHAR(50) DEFAULT \'Pending_BAST\';',
+      'ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS sea_approval_decision VARCHAR(50);',
+      'ALTER TABLE "service_orders" ADD COLUMN IF NOT EXISTS "sea_approval_decision" VARCHAR(50);',
       'ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS assigned_tech_at TIMESTAMP;',
       'ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS repair_started_at TIMESTAMP;',
       'ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS repair_finished_at TIMESTAMP;',
