@@ -687,6 +687,7 @@ const getDashboardStats = async (req, res) => {
           qcPassRate = `${((passedQC / totalQC) * 100).toFixed(1)}%`;
         }
       }
+    } catch (e) {}
     const recentOrders = await ServiceOrder.findAll({
       limit: 10,
       order: [['created_at', 'DESC']],
