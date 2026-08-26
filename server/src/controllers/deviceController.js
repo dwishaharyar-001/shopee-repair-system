@@ -687,11 +687,7 @@ const getDashboardStats = async (req, res) => {
           qcPassRate = `${((passedQC / totalQC) * 100).toFixed(1)}%`;
         }
       }
-    } catch (e) {}
-
-    // Recent Service Orders from real DB (Fallback to all active orders if filtered query returns 0)
-    let recentOrders = await ServiceOrder.findAll({
-      where: orderWhere,
+    const recentOrders = await ServiceOrder.findAll({
       limit: 10,
       order: [['created_at', 'DESC']],
       include: [
@@ -706,22 +702,14 @@ const getDashboardStats = async (req, res) => {
       ]
     });
 
-    if (recentOrders.length === 0) {
-      recentOrders = await ServiceOrder.findAll({
-        limit: 10,
-        order: [['created_at', 'DESC']],
-        include: [
-          { model: Device, as: 'device' },
-          { model: Customer, as: 'customer' },
-          { model: Branch, as: 'branch' },
-          {
-            model: Technician,
-            as: 'assignedTechnician',
-            include: [{ model: User, as: 'user', attributes: ['id', 'full_name'] }]
-          }
-        ]
-      });
-    }
+    // Format recent orders so assigned intake orders display 'Teknisi Assigned'
+    const formattedRecentOrders = recentOrders.map(order => {
+      const plainOrder = order.get ? order.get({ plain: true }) : { ...order };
+      if ((plainOrder.status === 'Intake' || !plainOrder.status) && (plainOrder.assigned_technician_id || plainOrder.assignedTechnician)) {
+        plainOrder.status = 'Teknisi Assigned';
+      }
+      return plainOrder;
+    });
 
     // Find latest Rework order for SLA timer card if any
     const reworkOrder = await ServiceOrder.findOne({
@@ -740,7 +728,7 @@ const getDashboardStats = async (req, res) => {
         qcPassRate,
         releasedOrders,
         totalOrders,
-        recentOrders,
+        recentOrders: formattedRecentOrders,
         reworkOrder
       }
     });
