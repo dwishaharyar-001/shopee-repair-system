@@ -94,8 +94,7 @@ const getWorkQueue = async (req, res) => {
         }
       ],
       order: [
-        ['updated_at', 'DESC'],
-        [{ model: RepairLog, as: 'repairLogs' }, 'id', 'DESC']
+        ['updated_at', 'DESC']
       ]
     });
 

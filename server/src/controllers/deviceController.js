@@ -666,7 +666,7 @@ const getDashboardStats = async (req, res) => {
       where: {
         ...orderWhere,
         status: {
-          [Op.in]: ['Intake', 'In Repair', 'Rework', 'QC1 Pending', 'QC2 Pending']
+          [Op.in]: ['Intake', 'Teknisi Assigned', 'In Repair', 'Rework', 'QC1 Pending', 'QC2 Pending']
         }
       }
     });
@@ -688,7 +688,9 @@ const getDashboardStats = async (req, res) => {
         }
       }
     } catch (e) {}
+
     const recentOrders = await ServiceOrder.findAll({
+      where: orderWhere,
       limit: 10,
       order: [['created_at', 'DESC']],
       include: [
