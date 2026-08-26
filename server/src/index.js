@@ -280,14 +280,18 @@ const initDatabase = async () => {
       `);
       await sequelize.query(`
         UPDATE service_orders 
-        SET bast_status = 'Approved_SEA' 
+        SET assigned_technician_id = (
+          SELECT t.id 
+          FROM technicians t 
+          WHERE t.user_id = service_orders.assigned_technician_id
+        ) 
         WHERE EXISTS (
           SELECT 1 
-          FROM bast_documents bd 
-          WHERE bd.status = 'Approved_SEA' AND bd.bast_type = '1'
+          FROM technicians t 
+          WHERE t.user_id = service_orders.assigned_technician_id
         );
       `);
-      console.log('✅ Synchronized service_orders bast_status to Approved_SEA.');
+      console.log('✅ Synchronized service_orders bast_status & technician assignment.');
     } catch (e) {}
 
     await ensureDefaultBranches();

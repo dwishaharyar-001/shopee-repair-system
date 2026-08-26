@@ -508,8 +508,18 @@ const updateServiceOrder = async (req, res) => {
           message: 'Distribusi unit ke teknisi terkunci: Dokumen BAST belum disetujui oleh QC SEA. Mohon selesaikan verifikasi BAST terlebih dahulu.'
         });
       }
-      order.assigned_technician_id = assigned_technician_id || null;
-      if (assigned_technician_id && !order.assigned_tech_at) {
+
+      let targetTechId = parseInt(assigned_technician_id);
+      const techByPk = await Technician.findByPk(targetTechId);
+      if (!techByPk) {
+        const techByUser = await Technician.findOne({ where: { user_id: targetTechId } });
+        if (techByUser) {
+          targetTechId = techByUser.id;
+        }
+      }
+
+      order.assigned_technician_id = targetTechId;
+      if (targetTechId && !order.assigned_tech_at) {
         order.assigned_tech_at = new Date();
       }
     } else if (assigned_technician_id === null || assigned_technician_id === '') {

@@ -19,16 +19,24 @@ const getWorkQueue = async (req, res) => {
       whereClause.status = { [Op.in]: ['Intake', 'In Repair', 'Rework', 'QC1 Pending'] };
     }
 
-    // Role-based strict isolation for Technicians
+    // Role-based flexible isolation for Technicians
     if (req.user && req.user.role === 'Technician') {
       const tech = await Technician.findOne({ where: { user_id: req.user.id } });
       if (tech) {
-        whereClause.assigned_technician_id = tech.id;
+        whereClause[Op.or] = [
+          { assigned_technician_id: tech.id },
+          { assigned_technician_id: req.user.id }
+        ];
       } else {
-        whereClause.assigned_technician_id = -1; // Return empty if technician profile missing
+        whereClause.assigned_technician_id = req.user.id;
       }
     } else if (technician_id) {
-      whereClause.assigned_technician_id = technician_id;
+      const techObj = await Technician.findByPk(technician_id);
+      const userId = techObj ? techObj.user_id : technician_id;
+      whereClause[Op.or] = [
+        { assigned_technician_id: parseInt(technician_id) },
+        { assigned_technician_id: userId }
+      ];
     }
 
     const orders = await ServiceOrder.findAll({
@@ -66,6 +74,23 @@ const getWorkQueue = async (req, res) => {
         [{ model: RepairLog, as: 'repairLogs' }, 'id', 'DESC']
       ]
     });
+
+    // Populate assignedTechnician if stored as user_id
+    for (const order of orders) {
+      if (!order.assignedTechnician && order.assigned_technician_id) {
+        let tech = await Technician.findOne({
+          where: { [Op.or]: [{ id: order.assigned_technician_id }, { user_id: order.assigned_technician_id }] },
+          include: [{ model: User, as: 'user', attributes: ['id', 'full_name'] }]
+        });
+        if (tech) {
+          order.setDataValue('assignedTechnician', tech);
+          if (order.assigned_technician_id !== tech.id) {
+            order.assigned_technician_id = tech.id;
+            await order.save().catch(() => {});
+          }
+        }
+      }
+    }
 
     return res.status(200).json({
       success: true,
