@@ -14,7 +14,16 @@ const generateBastNo = async (type = '1') => {
     }
   });
   const typeCode = type === '1' ? 'SHP-ARS' : type === '2' ? 'ARS-SHP' : 'PARTS';
-  return `BAST/${typeCode}/${year}/${month}/${String(count + 1).padStart(3, '0')}`;
+  
+  let seq = count + 1;
+  let candidate = `BAST/${typeCode}/${year}/${month}/${String(seq).padStart(3, '0')}`;
+
+  // Ensure candidate number is uniquely incremented if candidate exists in DB
+  while (await BastDocument.findOne({ where: { bast_number: candidate } })) {
+    seq++;
+    candidate = `BAST/${typeCode}/${year}/${month}/${String(seq).padStart(3, '0')}`;
+  }
+  return candidate;
 };
 
 /**
@@ -72,16 +81,46 @@ const createBast = async (req, res) => {
 
     const docNumber = bast_number || (await generateBastNo(bast_type));
 
-    // Get First Party user details
-    const firstPartyUserId = req.user ? req.user.id : 1;
-    let signatureUrl = first_party_signature;
-    if (!signatureUrl && req.user) {
-      const userObj = await User.findByPk(req.user.id);
-      signatureUrl = userObj?.signature_url || null;
+    // 1. Strict Check: Check if BAST Document already exists for this bast_number
+    let bastDoc = await BastDocument.findOne({ where: { bast_number: docNumber } });
+
+    if (bastDoc && bastDoc.status !== 'Revision_Requested') {
+      const statusLabel = bastDoc.status === 'Approved_SEA' ? 'Approved Client' : 'Menunggu Verifikasi QC Client';
+      return res.status(400).json({
+        success: false,
+        message: `Gagal membuat BAST: Nomor BAST '${docNumber}' sudah pernah dibuat dan terdaftar di sistem (Status: ${statusLabel}). Nomor BAST yang sudah dibuat tidak dapat di-generate ulang.`
+      });
     }
 
-    // Check if BAST Document already exists for this bast_number (Upsert handling)
-    let bastDoc = await BastDocument.findOne({ where: { bast_number: docNumber } });
+    // 2. Strict Check: Check if any of the devices are ALREADY linked to an active BAST Document
+    const orderIds = orders.map(o => o.id);
+    const existingBastItems = await BastItem.findAll({
+      where: { service_order_id: orderIds },
+      include: [
+        {
+          model: BastDocument,
+          as: 'bastDocument',
+          where: {
+            status: { [Op.in]: ['Submitted_to_SEA', 'Approved_SEA'] }
+          }
+        },
+        { model: ServiceOrder, as: 'serviceOrder' }
+      ]
+    });
+
+    // Exclude items belonging to bastDoc if bastDoc is in Revision_Requested mode
+    const conflictItems = existingBastItems.filter(item => !bastDoc || item.bast_document_id !== bastDoc.id);
+
+    if (conflictItems.length > 0) {
+      const conflictServiceIds = conflictItems
+        .map(item => item.serviceOrder?.service_id || `ID-${item.service_order_id}`)
+        .join(', ');
+      const conflictBastNo = conflictItems[0]?.bastDocument?.bast_number || 'lain';
+      return res.status(400).json({
+        success: false,
+        message: `Gagal membuat BAST: Perangkat [${conflictServiceIds}] sudah terdaftar pada Dokumen BAST '${conflictBastNo}'. Perangkat yang sudah masuk BAST tidak dapat dimasukkan ke nomor BAST lain.`
+      });
+    }
 
     if (bastDoc) {
       bastDoc.status = 'Submitted_to_SEA';

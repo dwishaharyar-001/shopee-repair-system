@@ -293,8 +293,8 @@ const BASTDocuments = () => {
             </button>
           )}
 
-          {/* Verifikasi BAST (QC SEA) */}
-          {currentBastRecord && (user?.role === 'QA_Liaison' || user?.role === 'Admin' || user?.qc_affiliation === 'Shopee') && (
+          {/* Verifikasi BAST (Khusus Role QC Client / QA Liaison) */}
+          {currentBastRecord && (user?.role === 'QA_Liaison' || user?.qc_affiliation === 'Client' || user?.qc_affiliation === 'Shopee') && (
             <button
               onClick={() => setIsSeaVerificationOpen(true)}
               className="px-5 py-2.5 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-xl shadow-md transition-all flex items-center justify-center space-x-2 border border-purple-500"
