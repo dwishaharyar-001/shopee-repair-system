@@ -126,7 +126,7 @@ const SignatureModal = ({ isOpen, onClose, onSuccess }) => {
               ✍️
             </div>
             <div>
-              <h3 className="font-bold text-base">Tanda Tangan Digital ({user?.role === 'QA_Liaison' ? 'QC Shopee' : user?.role})</h3>
+              <h3 className="font-bold text-base">Tanda Tangan Digital ({user?.role === 'QA_Liaison' ? 'QC Client' : user?.role})</h3>
               <p className="text-xs text-slate-400">Upload / Buat tanda tangan digital untuk Sign-off BAST</p>
             </div>
           </div>

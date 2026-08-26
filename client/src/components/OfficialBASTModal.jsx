@@ -257,7 +257,7 @@ const OfficialBASTModal = ({ isOpen, onClose }) => {
             {/* PIC Selectors */}
             <div>
               <label className="block text-[11px] font-bold text-slate-300 mb-1">
-                {bastType === '1' ? 'FIRST PARTY (QC Shopee):' : 'FIRST PARTY (Coordinator/QC Arisa):'}
+                {bastType === '1' ? 'FIRST PARTY (QC Client):' : 'FIRST PARTY (Coordinator/QC Arisa):'}
               </label>
               <select
                 value={firstPartyPicId}
@@ -275,7 +275,7 @@ const OfficialBASTModal = ({ isOpen, onClose }) => {
 
             <div>
               <label className="block text-[11px] font-bold text-slate-300 mb-1">
-                {bastType === '1' ? 'SECOND PARTY (Arisa Team):' : 'SECOND PARTY (QC Shopee):'}
+                {bastType === '1' ? 'SECOND PARTY (Arisa Team):' : 'SECOND PARTY (QC Client):'}
               </label>
               <select
                 value={secondPartyPicId}
@@ -315,9 +315,9 @@ const OfficialBASTModal = ({ isOpen, onClose }) => {
                 </h1>
                 <h3 className="text-xs font-bold uppercase text-slate-800 tracking-wider">
                   {bastType === '1' 
-                    ? 'UNIT HANDOVER FOR REPAIR WORK (SHOPEE → ARISA COMPUTER)' 
+                    ? 'UNIT HANDOVER FOR REPAIR WORK (CLIENT → ARISA COMPUTER)' 
                     : bastType === '2' 
-                    ? 'UNIT RETURN HANDOVER (ARISA COMPUTER → SHOPEE)' 
+                    ? 'UNIT RETURN HANDOVER (ARISA COMPUTER → CLIENT)' 
                     : 'HANDOVER OF USED SPARE PARTS'}
                 </h3>
                 <p className="text-xs font-mono font-bold text-slate-800 pt-1">
@@ -327,7 +327,7 @@ const OfficialBASTModal = ({ isOpen, onClose }) => {
 
               {/* Statement Description */}
               <p className="text-xs leading-relaxed text-slate-800">
-                On this day, <span className="font-semibold underline">{dateDay}</span> date <span className="font-semibold underline">{dateNum}</span> month <span className="font-semibold underline">{monthName}</span> year <span className="font-semibold underline">{yearNum}</span>, the undersigned parties have carried out the handover of {bastType === '3' ? 'used/old spare parts resulting from component replacement during laptop unit repair' : 'laptop units'} {bastType === '1' ? 'from Shopee to Arisa Computer, to be worked on at the Shopee workshop' : 'from Arisa Computer to Shopee'}, with the following details:
+                On this day, <span className="font-semibold underline">{dateDay}</span> date <span className="font-semibold underline">{dateNum}</span> month <span className="font-semibold underline">{monthName}</span> year <span className="font-semibold underline">{yearNum}</span>, the undersigned parties have carried out the handover of {bastType === '3' ? 'used/old spare parts resulting from component replacement during laptop unit repair' : 'laptop units'} {bastType === '1' ? 'from Client to Arisa Computer, to be worked on at the workshop' : 'from Arisa Computer to Client'}, with the following details:
               </p>
 
               {/* FIRST PARTY & SECOND PARTY DETAILS */}
@@ -344,11 +344,11 @@ const OfficialBASTModal = ({ isOpen, onClose }) => {
                       <span className="font-semibold text-slate-600 block">
                         {bastType === '1' ? 'Position / Asset PIC :' : 'Position / Arisa Computer Team :'}
                       </span>
-                      <span className="font-bold text-slate-900">{firstPartyTitle || (bastType === '1' ? 'Asset PIC - Shopee' : 'Arisa Computer Team')}</span>
+                      <span className="font-bold text-slate-900">{firstPartyTitle || (bastType === '1' ? 'Asset PIC - Client' : 'Arisa Computer Team')}</span>
                     </div>
                     <div>
                       <span className="font-semibold text-slate-600 block">
-                        {bastType === '1' ? 'Shopee Location :' : 'Work Location :'}
+                        {bastType === '1' ? 'Client Location :' : 'Work Location :'}
                       </span>
                       <span className="font-bold text-slate-900">{firstPartyLocation}</span>
                     </div>
@@ -367,11 +367,11 @@ const OfficialBASTModal = ({ isOpen, onClose }) => {
                       <span className="font-semibold text-slate-600 block">
                         {bastType === '1' ? 'Position / Arisa Computer Team :' : 'Position / Asset PIC :'}
                       </span>
-                      <span className="font-bold text-slate-900">{secondPartyTitle || (bastType === '1' ? 'Arisa Computer Team' : 'Asset PIC - Shopee')}</span>
+                      <span className="font-bold text-slate-900">{secondPartyTitle || (bastType === '1' ? 'Arisa Computer Team' : 'Asset PIC - Client')}</span>
                     </div>
                     <div>
                       <span className="font-semibold text-slate-600 block">
-                        {bastType === '1' ? 'Work Location :' : 'Shopee Location :'}
+                        {bastType === '1' ? 'Work Location :' : 'Client Location :'}
                       </span>
                       <span className="font-bold text-slate-900">{secondPartyLocation}</span>
                     </div>
@@ -463,7 +463,7 @@ const OfficialBASTModal = ({ isOpen, onClose }) => {
                 <span className="font-bold text-slate-900 block mb-1">Notes / Additional Remarks:</span>
                 {bastType === '1' ? (
                   <ul className="list-disc list-inside space-y-0.5">
-                    <li>Physical condition & completeness have been jointly verified before the unit is handed over for work at the Shopee workshop.</li>
+                    <li>Physical condition & completeness have been jointly verified before the unit is handed over for work at the workshop.</li>
                     <li>Detailed condition of each component (per unit) is recorded in the Attachment - Unit Physical Condition Checklist, 'Condition Upon Receipt' section.</li>
                     <li>This document serves as official evidence that responsibility for the unit's repair has transferred to Arisa Computer.</li>
                   </ul>
@@ -494,7 +494,7 @@ const OfficialBASTModal = ({ isOpen, onClose }) => {
                     <div>
                       <h5 className="font-bold uppercase tracking-wider text-slate-900">FIRST PARTY</h5>
                       <p className="text-[11px] text-slate-500 italic font-serif">
-                        {bastType === '1' ? 'Asset PIC - Shopee' : 'Arisa Computer Team'}
+                        {bastType === '1' ? 'Asset PIC - Client' : 'Arisa Computer Team'}
                       </p>
                     </div>
 
@@ -526,7 +526,7 @@ const OfficialBASTModal = ({ isOpen, onClose }) => {
                     <div>
                       <h5 className="font-bold uppercase tracking-wider text-slate-900">SECOND PARTY</h5>
                       <p className="text-[11px] text-slate-500 italic font-serif">
-                        {bastType === '1' ? 'Arisa Computer Team' : 'Asset PIC - Shopee'}
+                        {bastType === '1' ? 'Arisa Computer Team' : 'Asset PIC - Client'}
                       </p>
                     </div>
 
