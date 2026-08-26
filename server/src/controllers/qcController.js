@@ -171,7 +171,7 @@ const startQC2 = async (req, res) => {
 };
 
 // 3. Submit QC Checkpoint 2 (Final Release Inspection)
-const submitQC2Check = async (req, res) => {
+const submitQC2 = async (req, res) => {
   try {
     const { id } = req.params;
     const { results = {}, overall_result, failure_reason, rework_notes } = req.body;
