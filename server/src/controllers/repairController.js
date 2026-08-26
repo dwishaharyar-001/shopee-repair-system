@@ -22,14 +22,13 @@ const getWorkQueue = async (req, res) => {
     // Role-based flexible isolation for Technicians
     if (req.user && req.user.role === 'Technician') {
       const tech = await Technician.findOne({ where: { user_id: req.user.id } });
-      if (tech) {
-        whereClause[Op.or] = [
-          { assigned_technician_id: tech.id },
-          { assigned_technician_id: req.user.id }
-        ];
-      } else {
-        whereClause.assigned_technician_id = req.user.id;
-      }
+      const validTechIds = [req.user.id];
+      if (tech) validTechIds.push(tech.id);
+
+      whereClause[Op.or] = [
+        { assigned_technician_id: { [Op.in]: validTechIds } },
+        { '$assignedTechnician.user_id$': req.user.id }
+      ];
     } else if (technician_id) {
       const techObj = await Technician.findByPk(technician_id);
       const userId = techObj ? techObj.user_id : technician_id;

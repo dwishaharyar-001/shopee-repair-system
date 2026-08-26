@@ -304,13 +304,14 @@ const EditDeviceModal = ({ isOpen, onClose, order, onSuccess }) => {
               >
                 <option value="">-- Belum Ditugaskan (Unassigned) --</option>
                 {technicians
-                  .filter(t => t.is_active && t.branch_id && String(t.branch_id) === String(formData.branch_id))
+                  .filter(t => t.is_active)
                   .map(t => {
                     const prof = t.technicianProfile || t.technician || {};
                     const skill = prof.skill_level ? ` - ${prof.skill_level}` : '';
                     const empCode = prof.employee_code || `TECH-${String(t.id).padStart(3, '0')}`;
+                    const targetVal = prof.id || t.id;
                     return (
-                      <option key={prof.id || t.id} value={prof.id || t.id}>
+                      <option key={targetVal} value={targetVal}>
                         🛠️ {t.full_name} ({empCode}{skill})
                       </option>
                     );
