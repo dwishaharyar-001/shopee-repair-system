@@ -633,18 +633,47 @@ const getDevices = async (req, res) => {
 // 7. Get Real Dashboard Stats from Database
 const getDashboardStats = async (req, res) => {
   try {
+    let orderWhere = {};
+    if (req.user && req.user.role === 'Technician') {
+      let tech = await Technician.findOne({ where: { user_id: req.user.id } });
+      const validTechIds = new Set([req.user.id]);
+      if (tech) validTechIds.add(tech.id);
+
+      const techsByUserId = await Technician.findAll({
+        where: { [Op.or]: [{ user_id: req.user.id }, { id: req.user.id }] }
+      });
+      techsByUserId.forEach(t => {
+        validTechIds.add(t.id);
+        if (t.user_id) validTechIds.add(t.user_id);
+      });
+
+      if (req.user.full_name) {
+        const techsByName = await Technician.findAll({
+          where: { full_name: req.user.full_name }
+        });
+        techsByName.forEach(t => {
+          validTechIds.add(t.id);
+          if (t.user_id) validTechIds.add(t.user_id);
+        });
+      }
+
+      const idArray = Array.from(validTechIds).map(id => parseInt(id)).filter(Boolean);
+      orderWhere.assigned_technician_id = { [Op.in]: idArray };
+    }
+
     const totalDevices = await Device.count();
     const activeInRepair = await ServiceOrder.count({
       where: {
+        ...orderWhere,
         status: {
-          [Op.in]: ['In Repair', 'Rework', 'QC1 Pending', 'QC2 Pending']
+          [Op.in]: ['Intake', 'In Repair', 'Rework', 'QC1 Pending', 'QC2 Pending']
         }
       }
     });
 
-    const totalOrders = await ServiceOrder.count();
+    const totalOrders = await ServiceOrder.count({ where: orderWhere });
     const releasedOrders = await ServiceOrder.count({
-      where: { status: 'Released' }
+      where: { ...orderWhere, status: 'Released' }
     });
 
     // QC Pass rate calculation from QCCheckpoint
@@ -662,7 +691,8 @@ const getDashboardStats = async (req, res) => {
 
     // Recent 5 Service Orders from real DB
     const recentOrders = await ServiceOrder.findAll({
-      limit: 5,
+      where: orderWhere,
+      limit: 10,
       order: [['created_at', 'DESC']],
       include: [
         { model: Device, as: 'device' },
@@ -678,7 +708,7 @@ const getDashboardStats = async (req, res) => {
 
     // Find latest Rework order for SLA timer card if any
     const reworkOrder = await ServiceOrder.findOne({
-      where: { status: 'Rework' },
+      where: { ...orderWhere, status: 'Rework' },
       include: [
         { model: Device, as: 'device' }
       ],
