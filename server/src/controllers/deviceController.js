@@ -71,17 +71,45 @@ const getServiceOrders = async (req, res) => {
     }
 
     try {
+      // 1. Sync by service_order_id
       await sequelize.query(`
         UPDATE service_orders 
-        SET bast_status = 'Approved_SEA' 
-        WHERE id IN (
-          SELECT service_order_id 
+        SET bast_status = (
+          SELECT bd.status 
           FROM bast_items bi 
           JOIN bast_documents bd ON bi.bast_document_id = bd.id 
-          WHERE bd.status = 'Approved_SEA'
+          WHERE bi.service_order_id = service_orders.id 
+          ORDER BY bd.id DESC 
+          LIMIT 1
+        ) 
+        WHERE EXISTS (
+          SELECT 1 
+          FROM bast_items bi 
+          JOIN bast_documents bd ON bi.bast_document_id = bd.id 
+          WHERE bi.service_order_id = service_orders.id
         );
       `);
-    } catch (e) {}
+      // 2. Sync by device_id
+      await sequelize.query(`
+        UPDATE service_orders 
+        SET bast_status = (
+          SELECT bd.status 
+          FROM bast_items bi 
+          JOIN bast_documents bd ON bi.bast_document_id = bd.id 
+          WHERE bi.device_id = service_orders.device_id 
+          ORDER BY bd.id DESC 
+          LIMIT 1
+        ) 
+        WHERE EXISTS (
+          SELECT 1 
+          FROM bast_items bi 
+          JOIN bast_documents bd ON bi.bast_document_id = bd.id 
+          WHERE bi.device_id = service_orders.device_id
+        );
+      `);
+    } catch (e) {
+      console.warn('BAST status sync warning:', e.message);
+    }
 
     const orders = await ServiceOrder.findAll({
       where: whereClause,
