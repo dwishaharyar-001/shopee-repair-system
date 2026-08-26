@@ -89,35 +89,39 @@ const BASTDocuments = () => {
   };
 
   // Filter PIC options based on role and BAST process type
-  const picShopeeUsers = allUsers.filter(u => 
-    u.role === 'QA_Liaison' || u.qc_affiliation === 'Shopee' || u.role === 'Admin'
+  const picClientUsers = allUsers.filter(u => 
+    u.role === 'QA_Liaison' || u.qc_affiliation === 'Client' || u.role === 'Admin'
   );
 
   const picArisaUsers = allUsers.filter(u => 
-    u.role === 'Coordinator' || (u.role === 'QA_Liaison' && u.qc_affiliation === 'Arisa') || u.role === 'Admin'
+    u.role === 'Coordinator' || u.role === 'Technician' || u.role === 'Admin'
   );
 
   // Set default PIC selections when sub-menu tab changes
   useEffect(() => {
     if (bastType === '1') {
-      // Shopee -> Arisa: First Party = Shopee, Second Party = Arisa
-      if (picShopeeUsers.length > 0) {
-        setFirstPartyPicId(picShopeeUsers[0].id);
-        setFirstPartyTitle('Asset PIC - Shopee');
+      // Client -> Arisa: First Party = Client, Second Party = Arisa
+      if (picClientUsers.length > 0) {
+        setFirstPartyPicId(picClientUsers[0].id);
+        setFirstPartyTitle('Asset PIC - Client');
+        setFirstPartySignature(picClientUsers[0].signature_url || '');
       }
       if (picArisaUsers.length > 0) {
         setSecondPartyPicId(picArisaUsers[0].id);
         setSecondPartyTitle('Arisa Computer Team');
+        setSecondPartySignature(picArisaUsers[0].signature_url || '');
       }
     } else {
-      // Arisa -> Shopee / Used Parts: First Party = Arisa, Second Party = Shopee
+      // Arisa -> Client / Used Parts: First Party = Arisa, Second Party = Client
       if (picArisaUsers.length > 0) {
         setFirstPartyPicId(picArisaUsers[0].id);
         setFirstPartyTitle('Arisa Computer Team');
+        setFirstPartySignature(picArisaUsers[0].signature_url || '');
       }
-      if (picShopeeUsers.length > 0) {
-        setSecondPartyPicId(picShopeeUsers[0].id);
-        setSecondPartyTitle('Asset PIC - Shopee');
+      if (picClientUsers.length > 0) {
+        setSecondPartyPicId(picClientUsers[0].id);
+        setSecondPartyTitle('Asset PIC - Client');
+        setSecondPartySignature(picClientUsers[0].signature_url || '');
       }
     }
   }, [bastType, allUsers]);
@@ -345,10 +349,10 @@ const BASTDocuments = () => {
             <div>
               <div className="flex items-center space-x-1.5">
                 <span className={`text-xs font-bold uppercase tracking-wider ${bastType === '1' ? 'text-orange-950' : 'text-slate-700'}`}>
-                  1. Handover Shopee ➔ Arisa
+                  1. Handover Client ➔ Arisa
                 </span>
               </div>
-              <p className="text-[11px] text-slate-500 mt-0.5">Akumulasi Device Intake Per Hari (`Handover Shopee to Arisa.pdf`)</p>
+              <p className="text-[11px] text-slate-500 mt-0.5">Akumulasi Device Intake Per Hari (`Handover Client to Arisa.pdf`)</p>
             </div>
           </button>
 
@@ -367,10 +371,10 @@ const BASTDocuments = () => {
             <div>
               <div className="flex items-center space-x-1.5">
                 <span className={`text-xs font-bold uppercase tracking-wider ${bastType === '2' ? 'text-cyan-950' : 'text-slate-700'}`}>
-                  2. Handover Arisa ➔ Shopee
+                  2. Handover Arisa ➔ Client
                 </span>
               </div>
-              <p className="text-[11px] text-slate-500 mt-0.5">Akumulasi Unit Return Selesai Perbaikan Pekanan (`Handover Arisa to Shopee.pdf`)</p>
+              <p className="text-[11px] text-slate-500 mt-0.5">Akumulasi Unit Return Selesai Perbaikan Pekanan (`Handover Arisa to Client.pdf`)</p>
             </div>
           </button>
 

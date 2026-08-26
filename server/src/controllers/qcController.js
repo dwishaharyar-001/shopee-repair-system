@@ -163,43 +163,61 @@ const startQC2 = async (req, res) => {
       await order.save();
     }
 
-    return res.status(200).json({ success: true, message: 'Timestamp Mulai Audit QC2 Shopee dicatat.', data: order });
+    return res.status(200).json({ success: true, message: 'Timestamp Mulai Audit QC2 Final dicatat.', data: order });
   } catch (error) {
-    return res.status(500).json({ success: false, message: 'Gagal mencatat timestamp mulai QC2.', error: error.message });
+    console.error('Error in startQC2Audit:', error);
+    return res.status(500).json({ success: false, message: 'Gagal mencatat timestamp audit QC2.' });
   }
 };
 
-// 3. Submit QC Checkpoint 2 (Shopee Final Release Inspection)
-const submitQC2 = async (req, res) => {
+// 3. Submit QC Checkpoint 2 (Final Release Inspection)
+const submitQC2Check = async (req, res) => {
   try {
-    const { service_order_id, functional_test, physical_cosmetic_test, os_firmware_test, overall_result, failure_reason, rework_notes } = req.body;
+    const { id } = req.params;
+    const { results = {}, overall_result, failure_reason, rework_notes } = req.body;
+    const inspector_id = req.user ? req.user.id : null;
 
-    if (!service_order_id || !overall_result) {
-      return res.status(400).json({ success: false, message: 'Harap tentukan Service Order ID dan Hasil Evaluasi (Passed/Rejected).' });
-    }
-
-    const order = await ServiceOrder.findByPk(service_order_id);
+    const order = await ServiceOrder.findByPk(id);
     if (!order) {
       return res.status(404).json({ success: false, message: 'Service Order tidak ditemukan.' });
     }
 
-    // Record QC2 Start and Finish Timestamps
-    if (!order.qc2_started_at) order.qc2_started_at = new Date();
-    order.qc2_finished_at = new Date();
-
-    const count = await QCCheckpoint.count();
-    const qcCode = generateQCCode(count + 1);
+    const qcCode = generateQCCode();
+    const passed = overall_result === 'Passed';
+    const finishedAt = new Date();
 
     const checkpoint = await QCCheckpoint.create({
+      service_order_id: order.id,
+      checkpoint_type: 'qc2',
       qc_code: qcCode,
-      service_order_id,
-      checkpoint_type: 'Checkpoint 2',
+      inspector_id,
+      passed,
+      results,
+      failure_reason: passed ? null : failure_reason,
+      rework_notes: passed ? null : rework_notes,
+      started_at: order.qc2_started_at || finishedAt,
+      finished_at: finishedAt
+    });
+
+    if (passed) {
+      order.status = 'Released';
+      order.qc2_passed = true;
+    } else {
+      order.status = 'Rework';
+      order.qc2_passed = false;
+      order.rework_count = (order.rework_count || 0) + 1;
+    }
+    order.qc2_finished_at = finishedAt;
+    await order.save();
+
+    return res.status(200).json({
+      success: true,
+      message: `Audit QC2 Final '${qcCode}' berhasil disimpan! Status unit saat ini: '${order.status}'.`,
       inspector_id: req.user ? req.user.id : 1,
       functional_test: functional_test || 'Pass',
       physical_cosmetic_test: physical_cosmetic_test || 'Pass',
       os_firmware_test: os_firmware_test || 'Pass',
       overall_result,
-      failure_reason: overall_result === 'Rejected' ? failure_reason : null,
       rework_notes: rework_notes || null,
       qc_date: new Date()
     });

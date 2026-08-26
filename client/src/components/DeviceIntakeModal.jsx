@@ -462,7 +462,7 @@ const DeviceIntakeModal = ({ isOpen, onClose, onSuccess }) => {
                   type="text"
                   value={customerForm.name}
                   onChange={(e) => setCustomerForm(prev => ({ ...prev, name: e.target.value }))}
-                  placeholder="Contoh: PT Shopee Indonesia / Budi Santoso"
+                  placeholder="Contoh: PT Corporate Client / Budi Santoso"
                   className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-cyan-500 focus:outline-none"
                   required
                 />
@@ -491,7 +491,7 @@ const DeviceIntakeModal = ({ isOpen, onClose, onSuccess }) => {
                   type="email"
                   value={customerForm.contact_email}
                   onChange={(e) => setCustomerForm(prev => ({ ...prev, contact_email: e.target.value }))}
-                  placeholder="Contoh: contact@shopee.co.id"
+                  placeholder="Contoh: contact@client.co.id"
                   className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-cyan-500 focus:outline-none"
                 />
               </div>

@@ -128,7 +128,7 @@ const CustomerModal = ({ isOpen, onClose }) => {
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                  placeholder="Contoh: PT Shopee Indonesia"
+                  placeholder="Contoh: PT Corporate Client Indonesia"
                   className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-cyan-500 focus:outline-none"
                   required
                 />
@@ -155,7 +155,7 @@ const CustomerModal = ({ isOpen, onClose }) => {
                   type="email"
                   value={formData.contact_email}
                   onChange={(e) => setFormData(prev => ({ ...prev, contact_email: e.target.value }))}
-                  placeholder="Contoh: info@shopee.co.id"
+                  placeholder="Contoh: info@client.co.id"
                   className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-cyan-500 focus:outline-none"
                 />
               </div>

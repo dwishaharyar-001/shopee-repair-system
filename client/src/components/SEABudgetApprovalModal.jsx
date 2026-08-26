@@ -114,7 +114,7 @@ const SEABudgetApprovalModal = ({ isOpen, onClose, order, onSuccess }) => {
             </div>
             <div>
               <div className="flex items-center space-x-2">
-                <h3 className="font-extrabold text-lg tracking-tight">Verifikasi Rencana Perbaikan & Budget — QC SEA</h3>
+                <h3 className="font-extrabold text-lg tracking-tight">Verifikasi Rencana Perbaikan & Budget — QC Client</h3>
                 <span className="px-2.5 py-0.5 rounded-md font-mono text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
                   {order.service_id}
                 </span>
@@ -284,7 +284,7 @@ const SEABudgetApprovalModal = ({ isOpen, onClose, order, onSuccess }) => {
           <div className="space-y-4 bg-slate-50 p-5 rounded-2xl border border-slate-200">
             <h4 className="font-extrabold text-slate-900 text-sm flex items-center space-x-1.5">
               <ShieldCheck className="w-4 h-4 text-purple-600" />
-              <span>Opsi Keputusan Verification & Budget Approval QC SEA:</span>
+              <span>Opsi Keputusan Verification & Budget Approval QC Client:</span>
             </h4>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -381,7 +381,7 @@ const SEABudgetApprovalModal = ({ isOpen, onClose, order, onSuccess }) => {
             {/* Notes Input */}
             <div className="space-y-1.5">
               <label className="block font-bold text-slate-700 text-xs">
-                Catatan Feedback & Instruksi QC SEA (Opsional / Wajib jika revisi):
+                Catatan Feedback & Instruksi QC Client (Opsional / Wajib jika revisi):
               </label>
               <textarea
                 value={notes}

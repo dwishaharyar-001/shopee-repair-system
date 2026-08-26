@@ -196,7 +196,7 @@ const uploadSignature = async (req, res) => {
     if (!isAllowedToUploadSig) {
       return res.status(403).json({
         success: false,
-        message: 'Akses ditolak. Fitur upload tanda tangan khusus untuk role Coordinator dan QC Shopee.'
+        message: 'Akses ditolak. Fitur upload tanda tangan khusus untuk role Coordinator dan QC Client.'
       });
     }
 

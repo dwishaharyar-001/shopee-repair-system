@@ -54,34 +54,38 @@ const OfficialBASTModal = ({ isOpen, onClose }) => {
 
   // Filter PIC options based on role and BAST type
   const picShopeeUsers = allUsers.filter(u => 
-    u.role === 'QA_Liaison' || u.qc_affiliation === 'Shopee' || u.role === 'Admin'
+    u.role === 'QA_Liaison' || u.qc_affiliation === 'Client' || u.role === 'Admin'
   );
 
   const picArisaUsers = allUsers.filter(u => 
-    u.role === 'Coordinator' || (u.role === 'QA_Liaison' && u.qc_affiliation === 'Arisa') || u.role === 'Admin'
+    u.role === 'Coordinator' || u.role === 'Technician' || u.role === 'Admin'
   );
 
   // Set default PIC selections when bastType or users list changes
   useEffect(() => {
     if (bastType === '1') {
-      // Shopee -> Arisa: First Party = Shopee, Second Party = Arisa
+      // Client -> Arisa: First Party = Client, Second Party = Arisa
       if (picShopeeUsers.length > 0 && !firstPartyPicId) {
         setFirstPartyPicId(picShopeeUsers[0].id);
-        setFirstPartyTitle('Asset PIC - Shopee');
+        setFirstPartyTitle('Asset PIC - Client');
+        setFirstPartySignature(picShopeeUsers[0].signature_url || '');
       }
       if (picArisaUsers.length > 0 && !secondPartyPicId) {
         setSecondPartyPicId(picArisaUsers[0].id);
         setSecondPartyTitle('Arisa Computer Team');
+        setSecondPartySignature(picArisaUsers[0].signature_url || '');
       }
     } else {
-      // Arisa -> Shopee / Used Parts: First Party = Arisa, Second Party = Shopee
+      // Arisa -> Client / Used Parts: First Party = Arisa, Second Party = Client
       if (picArisaUsers.length > 0) {
         setFirstPartyPicId(picArisaUsers[0].id);
         setFirstPartyTitle('Arisa Computer Team');
+        setFirstPartySignature(picArisaUsers[0].signature_url || '');
       }
       if (picShopeeUsers.length > 0) {
         setSecondPartyPicId(picShopeeUsers[0].id);
-        setSecondPartyTitle('Asset PIC - Shopee');
+        setSecondPartyTitle('Asset PIC - Client');
+        setSecondPartySignature(picShopeeUsers[0].signature_url || '');
       }
     }
   }, [bastType, allUsers]);
@@ -178,16 +182,18 @@ const OfficialBASTModal = ({ isOpen, onClose }) => {
                 bastType === '1' ? 'bg-orange-500 text-white shadow-sm' : 'text-slate-400 hover:text-white'
               }`}
             >
-              <span>📋 1. Intake Harian (Shopee ➔ Arisa)</span>
+              <span>📋 1. Intake Harian (Client ➔ Arisa)</span>
             </button>
-
             <button
+              type="button"
               onClick={() => setBastType('2')}
-              className={`py-2 px-3 rounded-lg transition-all text-left flex items-center space-x-2 ${
-                bastType === '2' ? 'bg-cyan-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
+              className={`py-2 px-3 rounded-lg text-xs font-bold transition-all ${
+                bastType === '2'
+                  ? 'bg-cyan-600 text-white shadow-xs'
+                  : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
               }`}
             >
-              <span>🔄 2. Pengembalian Unit Pekanan (Arisa ➔ Shopee)</span>
+              <span>🔄 2. Pengembalian Unit Pekanan (Arisa ➔ Client)</span>
             </button>
 
             <button

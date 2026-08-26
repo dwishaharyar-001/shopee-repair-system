@@ -132,7 +132,7 @@ const QC = () => {
 
         {/* QC2 Pass Rate */}
         <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200 shadow-2xs">
-          <span className="text-[10px] sm:text-[11px] font-bold text-purple-600 uppercase tracking-wider block truncate">QC2 Shopee Pass Rate</span>
+          <span className="text-[10px] sm:text-[11px] font-bold text-purple-600 uppercase tracking-wider block truncate">QC2 Final Pass Rate</span>
           <div className="text-xl sm:text-2xl font-extrabold text-slate-900 mt-1">{metrics.qc2PassRate}%</div>
           <div className="text-[10px] sm:text-[11px] text-slate-400 mt-0.5 font-medium truncate">
             {metrics.passedQC2} / {metrics.totalQC2} Unit Lulus
@@ -169,7 +169,7 @@ const QC = () => {
           }`}
         >
           <FileCheck className="w-4 h-4 flex-shrink-0" />
-          <span className="truncate">Verifikasi BAST Intake (QC SEA)</span>
+          <span className="truncate">Verifikasi BAST Intake (QC Client)</span>
         </button>
 
         <button
@@ -181,7 +181,7 @@ const QC = () => {
           }`}
         >
           <Calculator className="w-4 h-4 flex-shrink-0" />
-          <span className="truncate">Approval Budget & Rencana (QC SEA)</span>
+          <span className="truncate">Approval Budget & Rencana (QC Client)</span>
         </button>
 
         <button
@@ -205,7 +205,7 @@ const QC = () => {
           }`}
         >
           <Award className="w-4 h-4 flex-shrink-0" />
-          <span className="truncate">Antrean QC2 Shopee (Release)</span>
+          <span className="truncate">Antrean QC2 Final Release</span>
         </button>
 
         <button
@@ -500,7 +500,7 @@ const QC = () => {
                           className="w-full py-2.5 bg-purple-600 hover:bg-purple-700 active:bg-purple-800 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-purple-600/20 flex items-center justify-center space-x-2"
                         >
                           <Award className="w-4 h-4" />
-                          <span>Mulai Uji QC2 Shopee</span>
+                          <span>Mulai Uji QC2 Final</span>
                         </button>
                       )}
                     </div>
@@ -566,7 +566,7 @@ const QC = () => {
                               className="px-3.5 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-purple-600/20 flex items-center space-x-1.5 mx-auto"
                             >
                               <Award className="w-3.5 h-3.5" />
-                              <span>Uji QC2 Shopee</span>
+                              <span>Uji QC2 Final</span>
                             </button>
                           )}
                         </td>

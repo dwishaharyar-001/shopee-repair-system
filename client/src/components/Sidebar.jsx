@@ -75,12 +75,12 @@ const Sidebar = () => {
         <div className="h-16 px-4 flex items-center justify-between border-b border-slate-800/90 bg-[#161a23]">
           <div className="flex items-center space-x-3 overflow-hidden">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-orange-500 via-amber-500 to-yellow-400 flex items-center justify-center font-extrabold text-white shadow-lg shadow-orange-500/25 flex-shrink-0 ring-2 ring-orange-500/20">
-              S
+              A
             </div>
             {(!isCollapsed || isMobileOpen) && (
               <div className="transition-opacity duration-200 truncate">
                 <h1 className="font-extrabold text-slate-100 text-sm tracking-wide leading-none flex items-center gap-1.5">
-                  <span>SHOPEE REPAIR</span>
+                  <span>ASSET REPAIR</span>
                 </h1>
                 <p className="text-[10px] text-orange-400/90 font-semibold tracking-wider uppercase mt-1 flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse inline-block"></span>

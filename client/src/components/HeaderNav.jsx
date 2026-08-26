@@ -63,7 +63,7 @@ const HeaderNav = () => {
           {/* Mobile Brand Title or Desktop Search */}
           <div className="flex items-center space-x-2">
             <span className="lg:hidden font-bold text-xs sm:text-sm text-slate-800 tracking-tight">
-              Shopee Repair
+              Asset Repair System
             </span>
             <form onSubmit={handleGlobalSearchSubmit} className="hidden md:flex items-center space-x-1.5 relative w-64 lg:w-96">
               <div className="relative flex-1">

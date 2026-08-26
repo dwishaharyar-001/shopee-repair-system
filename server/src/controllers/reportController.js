@@ -329,8 +329,8 @@ const exportKPICSV = async (req, res) => {
       '4. Tanggal Selesai Perbaikan (Repair Finished)',
       '5. Tanggal Mulai QC1 Arisa (QC1 Started)',
       '6. Tanggal Selesai QC1 Arisa (QC1 Finished)',
-      '7. Tanggal Mulai QC2 Shopee (QC2 Started)',
-      '8. Tanggal Selesai QC2 Shopee (QC2 Finished)',
+      '7. Tanggal Mulai QC2 Final (QC2 Started)',
+      '8. Tanggal Selesai QC2 Final (QC2 Finished)',
       '9. Tanggal Release Unit (Released Date)'
     ];
 

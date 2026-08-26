@@ -164,8 +164,8 @@ const BASTDocumentModal = ({ isOpen, onClose, orderId }) => {
                 </div>
 
                 <div className="text-right text-xs">
-                  <div className="font-bold text-slate-800">{order?.branch?.name || 'Cabang Shopee Central'}</div>
-                  <div className="text-slate-500 text-[11px] max-w-xs mt-0.5">{order?.branch?.address || 'Pusat Service & Perbaikan Perangkat Shopee'}</div>
+                  <div className="font-bold text-slate-800">{order?.branch?.name || 'Central Hub'}</div>
+                  <div className="text-slate-500 text-[11px] max-w-xs mt-0.5">{order?.branch?.address || 'Pusat Service & Perbaikan Perangkat Asset'}</div>
                   <div className="font-mono text-slate-600 text-[11px] mt-1">Tanggal: {currentDateStr}</div>
                 </div>
               </div>
@@ -307,23 +307,23 @@ const BASTDocumentModal = ({ isOpen, onClose, orderId }) => {
                     </div>
                   </div>
 
-                  {/* Column 2: PIC Shopee (QC Shopee Dropdown) */}
+                  {/* Column 2: PIC Client (QC Client Dropdown) */}
                   <div className="flex flex-col justify-between h-48 border border-orange-200 bg-orange-50/20 rounded-xl p-3 print:border-slate-300 print:bg-white">
                     <div>
                       <span className="font-bold text-orange-950 uppercase tracking-wider text-[10px] block mb-1 print:text-black">
-                        Yang Menerima (Nama PIC Shopee)
+                        Yang Menerima (Nama PIC Client)
                       </span>
-                      {/* Dropdown Select QC Shopee (Screen mode) */}
+                      {/* Dropdown Select QC Client (Screen mode) */}
                       <div className="print:hidden">
                         <select
                           value={selectedQCShopeeId}
                           onChange={(e) => setSelectedQCShopeeId(e.target.value)}
                           className="w-full bg-white border border-orange-300 rounded px-2 py-1 text-[11px] font-bold text-slate-800 focus:ring-1 focus:ring-orange-500"
                         >
-                          <option value="">-- Pilih QC Shopee --</option>
+                          <option value="">-- Pilih QC Client --</option>
                           {qcShopeeUsers.map(u => (
                             <option key={u.id} value={u.id}>
-                              🛍️ {u.full_name} ({u.qc_affiliation || 'QC Shopee'})
+                              🛍️ {u.full_name} ({u.qc_affiliation || 'QC Client'})
                             </option>
                           ))}
                         </select>
@@ -335,19 +335,19 @@ const BASTDocumentModal = ({ isOpen, onClose, orderId }) => {
                       {qcShopeeSignature ? (
                         <img
                           src={qcShopeeSignature}
-                          alt={`Tanda Tangan QC Shopee`}
+                          alt={`Tanda Tangan QC Client`}
                           className="max-h-16 max-w-full object-contain mx-auto"
                         />
                       ) : (
                         <div className="text-slate-400 text-[10px] italic border border-dashed border-slate-300 rounded p-1.5 bg-slate-50">
-                          (Tanda Tangan QC Shopee)
+                          (Tanda Tangan QC Client)
                         </div>
                       )}
                     </div>
 
                     <div className="border-t border-slate-300 pt-1.5 font-bold text-slate-900">
-                      {currentQCShopee?.full_name || 'PIC QC Shopee'}
-                      <div className="text-[10px] text-slate-500 font-normal">QC Inspector Shopee</div>
+                      {currentQCShopee?.full_name || 'PIC QC Client'}
+                      <div className="text-[10px] text-slate-500 font-normal">QC Inspector Client</div>
                     </div>
                   </div>
 

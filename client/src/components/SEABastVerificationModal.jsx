@@ -26,7 +26,7 @@ const SEABastVerificationModal = ({ isOpen, onClose, bastId, onSuccess }) => {
   // Form State
   const [itemStates, setItemStates] = useState({});
   const [overallDecision, setOverallDecision] = useState('Approved');
-  const [secondPartyTitle, setSecondPartyTitle] = useState('Asset PIC / QC Liaison - Shopee');
+  const [secondPartyTitle, setSecondPartyTitle] = useState('Asset PIC / QC Liaison - Client');
   const [signatureData, setSignatureData] = useState('');
   const [rejectionReason, setRejectionReason] = useState('');
   const [notes, setNotes] = useState('');
@@ -183,7 +183,7 @@ const SEABastVerificationModal = ({ isOpen, onClose, bastId, onSuccess }) => {
       const res = await bastService.verifyBastBySea(bastId, {
         items: formattedItems,
         overall_decision: overallDecision,
-        second_party_title: secondPartyTitle || 'Asset PIC / QC Liaison - Shopee',
+        second_party_title: secondPartyTitle || 'Asset PIC / QC Liaison - Client',
         second_party_signature: effectiveSig,
         rejection_reason: rejectionReason,
         notes
@@ -215,7 +215,7 @@ const SEABastVerificationModal = ({ isOpen, onClose, bastId, onSuccess }) => {
             </div>
             <div>
               <div className="flex items-center space-x-2">
-                <h3 className="font-extrabold text-lg tracking-tight">Verifikasi BAST Intake Harian — QC SEA</h3>
+                <h3 className="font-extrabold text-lg tracking-tight">Verifikasi BAST Intake Harian — QC Client</h3>
                 {bastData && (
                   <span className="px-2.5 py-0.5 rounded-md font-mono text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
                     {bastData.bast_number}
@@ -298,7 +298,7 @@ const SEABastVerificationModal = ({ isOpen, onClose, bastId, onSuccess }) => {
                         <th className="py-3 px-3.5">Asset ID & Tiket SvcID</th>
                         <th className="py-3 px-3.5">Perangkat & SN</th>
                         <th className="py-3 px-3.5">Kondisi Awal & Kelengkapan</th>
-                        <th className="py-3 px-3.5 text-center w-44">Status QC SEA</th>
+                        <th className="py-3 px-3.5 text-center w-44">Status QC Client</th>
                         <th className="py-3 px-3.5">Catatan Verifikasi QC</th>
                       </tr>
                     </thead>
@@ -456,7 +456,7 @@ const SEABastVerificationModal = ({ isOpen, onClose, bastId, onSuccess }) => {
                   {/* Signature Capture Box */}
                   <div className="space-y-2 bg-white p-3.5 rounded-xl border border-slate-200">
                     <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-bold text-slate-700">Tanda Tangan Digital Account QC SEA:</span>
+                      <span className="text-[11px] font-bold text-slate-700">Tanda Tangan Digital Account QC Client:</span>
                       <div className="flex items-center space-x-1 text-[10px] font-bold text-slate-500">
                         <button
                           type="button"

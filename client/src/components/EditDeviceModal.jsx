@@ -199,7 +199,7 @@ const EditDeviceModal = ({ isOpen, onClose, order, onSuccess }) => {
                 <option value="In Repair">In Repair (Dalam Pengerjaan)</option>
                 <option value="QC1 Pending">QC1 Pending (Audit Arisa)</option>
                 <option value="Rework">Rework (Perbaikan Ulang 48h)</option>
-                <option value="QC2 Pending">QC2 Pending (Audit Shopee)</option>
+                <option value="QC2 Pending">QC2 Pending (Audit Final)</option>
                 <option value="Released">Released (Selesai & Diserahkan)</option>
               </select>
             </div>
@@ -291,7 +291,7 @@ const EditDeviceModal = ({ isOpen, onClose, order, onSuccess }) => {
 
               {(order?.bast_status !== 'Approved_SEA' && order?.bast_status !== 'Verified_By_SEA') && (
                 <div className="mb-2 p-2.5 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 text-[11px] font-medium">
-                  <strong>Catatan Workflow:</strong> Unit ini harus masuk dokumen BAST (Shopee → Arisa) dan diverifikasi oleh QC SEA terlebih dahulu sebelum dapat didistribusikan ke Teknisi.
+                  <strong>Catatan Workflow:</strong> Unit ini harus masuk dokumen BAST (Client → Arisa) dan diverifikasi oleh QC Client terlebih dahulu sebelum dapat didistribusikan ke Teknisi.
                 </div>
               )}
 

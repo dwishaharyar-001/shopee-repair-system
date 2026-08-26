@@ -252,7 +252,7 @@ const verifyBastBySea = async (req, res) => {
     const {
       items = [],
       overall_decision, // 'Approved' or 'Revision_Requested'
-      second_party_title = 'Asset PIC / QC - Shopee',
+      second_party_title = 'Asset PIC / QC - Client',
       second_party_signature,
       rejection_reason,
       notes

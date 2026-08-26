@@ -76,7 +76,7 @@ const QCCheckpoint2Modal = ({ isOpen, onClose, order, onSuccess }) => {
               <Award className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
             <div>
-              <h3 className="font-bold text-sm sm:text-base">Audit QC Checkpoint 2 (Shopee Release)</h3>
+              <h3 className="font-bold text-sm sm:text-base">Audit QC Checkpoint 2 (Final Release)</h3>
               <p className="text-[10px] sm:text-xs text-slate-400">Verifikasi Akhir Kosmetik, Fungsionalitas & Approval Rilis</p>
             </div>
           </div>
@@ -112,7 +112,7 @@ const QCCheckpoint2Modal = ({ isOpen, onClose, order, onSuccess }) => {
 
           {/* Criteria Checklist */}
           <div className="space-y-2.5">
-            <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Kriteria Evaluasi Release Shopee</h4>
+            <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Kriteria Evaluasi Final Release</h4>
             {testItems.map((item) => (
               <div key={item.key} className="flex flex-col sm:flex-row sm:items-center justify-between bg-slate-50 p-3 rounded-xl border border-slate-200/80 gap-2">
                 <div>
@@ -154,56 +154,71 @@ const QCCheckpoint2Modal = ({ isOpen, onClose, order, onSuccess }) => {
           {/* Overall Decision Selector */}
           <div className="p-3.5 sm:p-4 rounded-xl border border-slate-200 bg-slate-50 space-y-2">
             <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
-              Keputusan Final Release Shopee:
+              Keputusan Final Release:
             </label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"
                 onClick={() => setOverallResult('Passed')}
-                className={`py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center space-x-2 border transition-all ${
+                className={`p-3 rounded-xl border text-xs font-bold transition-all flex items-center justify-center space-x-2 ${
                   overallResult === 'Passed'
-                    ? 'bg-purple-600 text-white border-purple-600 shadow-md ring-2 ring-purple-200'
-                    : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
+                    ? 'bg-emerald-600 text-white border-emerald-600 shadow-md shadow-emerald-600/20'
+                    : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
                 }`}
               >
-                <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
-                <span>APPROVE RELEASE (Disetujui)</span>
+                <CheckCircle2 className="w-4 h-4" />
+                <span>Passed (Lolos Release)</span>
               </button>
-
               <button
                 type="button"
                 onClick={() => setOverallResult('Rejected')}
-                className={`py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center space-x-2 border transition-all ${
+                className={`p-3 rounded-xl border text-xs font-bold transition-all flex items-center justify-center space-x-2 ${
                   overallResult === 'Rejected'
-                    ? 'bg-red-600 text-white border-red-600 shadow-md ring-2 ring-red-200'
-                    : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
+                    ? 'bg-red-600 text-white border-red-600 shadow-md shadow-red-600/20'
+                    : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
                 }`}
               >
-                <XCircle className="w-4 h-4 flex-shrink-0" />
-                <span>REJECT (Rework 48h)</span>
+                <XCircle className="w-4 h-4" />
+                <span>Rejected (Rework Required)</span>
               </button>
             </div>
           </div>
 
-          {/* Failure Reason Input (if rejected) */}
+          {/* Rejection / Rework Section */}
           {overallResult === 'Rejected' && (
-            <div>
-              <label className="block text-xs font-semibold text-red-600 mb-1">
-                Alasan Penolakan / Cosmetic Defect <span className="text-red-500">*</span>
-              </label>
-              <textarea
-                rows="2"
-                value={failureReason}
-                onChange={(e) => setFailureReason(e.target.value)}
-                placeholder="Tuliskan catatan kerusakan kosmetik atau fungsionalitas yang harus diperbaiki..."
-                className="w-full bg-red-50/50 border border-red-300 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-red-500 focus:outline-none"
-                required
-              ></textarea>
+            <div className="p-4 bg-red-50 border border-red-200 rounded-xl space-y-3">
+              <div>
+                <label className="block text-xs font-bold text-red-900 mb-1">
+                  Penyebab Gagal Audit QC2 (Pilih Alasan Utama):
+                </label>
+                <select
+                  value={failureReason}
+                  onChange={(e) => setFailureReason(e.target.value)}
+                  className="w-full bg-white border border-red-300 rounded-lg px-3 py-2 text-xs font-medium text-red-900 focus:ring-2 focus:ring-red-500 focus:outline-none"
+                >
+                  {REJECT_REASONS.map((r, idx) => (
+                    <option key={idx} value={r}>{r}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-red-900 mb-1">
+                  Catatan Tambahan & Instruksi Rework (Dikirim ke Teknisi):
+                </label>
+                <textarea
+                  value={reworkNotes}
+                  onChange={(e) => setReworkNotes(e.target.value)}
+                  rows={2}
+                  placeholder="Contoh: Port USB kanan kendor, mohon kencangkan kembali solderannya..."
+                  className="w-full bg-white border border-red-300 rounded-lg p-3 text-xs font-medium text-red-900 focus:ring-2 focus:ring-red-500 focus:outline-none"
+                ></textarea>
+              </div>
             </div>
           )}
 
-          {/* Footer Buttons */}
-          <div className="pt-3 border-t border-slate-100 flex flex-col-reverse sm:flex-row items-center justify-end gap-2 sm:gap-3">
+          {/* Submit */}
+          <div className="pt-2 flex items-center justify-end space-x-3">
             <button
               type="button"
               onClick={onClose}
