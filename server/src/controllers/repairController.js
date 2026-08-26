@@ -9,13 +9,58 @@ const generateRepairCode = (num) => {
 // 1. Get Technician Work Queue
 const getWorkQueue = async (req, res) => {
   try {
-    const { status } = req.query;
+    const { status, technician_id } = req.query;
 
     let whereClause = {};
     if (status) {
       whereClause.status = status;
     } else {
       whereClause.status = { [Op.ne]: 'Released' };
+    }
+
+    // Role-based strict isolation: Technician only sees own assigned devices; Coordinator/Admin see ALL
+    if (req.user && req.user.role === 'Technician') {
+      let tech = await Technician.findOne({ where: { user_id: req.user.id } });
+      if (!tech) {
+        tech = await Technician.create({
+          user_id: req.user.id,
+          full_name: req.user.full_name,
+          employee_code: `TECH-${String(req.user.id).padStart(3, '0')}`,
+          is_active: true
+        }).catch(() => null);
+      }
+
+      const validTechIds = new Set([req.user.id]);
+      if (tech) validTechIds.add(tech.id);
+
+      const techsByUserId = await Technician.findAll({
+        where: { [Op.or]: [{ user_id: req.user.id }, { id: req.user.id }] }
+      });
+      techsByUserId.forEach(t => {
+        validTechIds.add(t.id);
+        if (t.user_id) validTechIds.add(t.user_id);
+      });
+
+      if (req.user.full_name) {
+        const techsByName = await Technician.findAll({
+          where: { full_name: req.user.full_name }
+        });
+        techsByName.forEach(t => {
+          validTechIds.add(t.id);
+          if (t.user_id) validTechIds.add(t.user_id);
+        });
+      }
+
+      const idArray = Array.from(validTechIds).map(id => parseInt(id)).filter(Boolean);
+      whereClause.assigned_technician_id = { [Op.in]: idArray };
+    } else if (technician_id) {
+      const techObj = await Technician.findByPk(technician_id);
+      const validTechIds = new Set([parseInt(technician_id)]);
+      if (techObj) {
+        validTechIds.add(techObj.id);
+        if (techObj.user_id) validTechIds.add(techObj.user_id);
+      }
+      whereClause.assigned_technician_id = { [Op.in]: Array.from(validTechIds) };
     }
 
     const orders = await ServiceOrder.findAll({
@@ -67,9 +112,17 @@ const getWorkQueue = async (req, res) => {
       }
     }
 
+    const formattedOrders = orders.map(order => {
+      const plainOrder = order.get ? order.get({ plain: true }) : { ...order };
+      if ((plainOrder.status === 'Intake' || !plainOrder.status) && (plainOrder.assigned_technician_id || plainOrder.assignedTechnician)) {
+        plainOrder.status = 'Teknisi Assigned';
+      }
+      return plainOrder;
+    });
+
     return res.status(200).json({
       success: true,
-      data: orders
+      data: formattedOrders
     });
   } catch (error) {
     console.error('getWorkQueue error:', error);
