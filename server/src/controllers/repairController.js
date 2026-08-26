@@ -97,6 +97,51 @@ const getWorkQueue = async (req, res) => {
       }).catch(() => []);
     }
 
+    // Strict JS memory filter for Technician role so only explicitly assigned orders are returned
+    if (req.user && req.user.role === 'Technician') {
+      let tech = await Technician.findOne({ where: { user_id: req.user.id } }).catch(() => null);
+      const validTechIds = new Set([req.user.id]);
+      if (tech) {
+        validTechIds.add(tech.id);
+        if (tech.user_id) validTechIds.add(tech.user_id);
+      }
+      try {
+        const techsByUserId = await Technician.findAll({
+          where: { [Op.or]: [{ user_id: req.user.id }, { id: req.user.id }] }
+        });
+        techsByUserId.forEach(t => {
+          validTechIds.add(t.id);
+          if (t.user_id) validTechIds.add(t.user_id);
+        });
+      } catch (e) {}
+
+      if (req.user.full_name) {
+        try {
+          const techsByName = await Technician.findAll({
+            where: { full_name: req.user.full_name }
+          });
+          techsByName.forEach(t => {
+            validTechIds.add(t.id);
+            if (t.user_id) validTechIds.add(t.user_id);
+          });
+        } catch (e) {}
+      }
+
+      const idArray = Array.from(validTechIds).map(id => parseInt(id)).filter(id => !isNaN(id));
+
+      orders = orders.filter(order => {
+        const plainTechId = order.assigned_technician_id ? parseInt(order.assigned_technician_id) : null;
+        const assignedTechObjId = order.assignedTechnician ? parseInt(order.assignedTechnician.id) : null;
+        const assignedUserId = order.assignedTechnician && order.assignedTechnician.user_id ? parseInt(order.assignedTechnician.user_id) : null;
+
+        return (
+          (plainTechId !== null && idArray.includes(plainTechId)) ||
+          (assignedTechObjId !== null && idArray.includes(assignedTechObjId)) ||
+          (assignedUserId !== null && idArray.includes(assignedUserId))
+        );
+      });
+    }
+
     const activeOrders = status ? orders : orders.filter(o => o.status !== 'Released');
 
     const formattedOrders = await Promise.all(
