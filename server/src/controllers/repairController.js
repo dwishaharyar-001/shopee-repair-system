@@ -68,56 +68,74 @@ const getWorkQueue = async (req, res) => {
       include: [
         { model: Device, as: 'device' },
         { model: Customer, as: 'customer', attributes: ['id', 'customer_code', 'name'] },
+        { model: Branch, as: 'branch', attributes: ['id', 'name', 'code', 'address'] },
         {
           model: Technician,
           as: 'assignedTechnician',
           include: [{ model: User, as: 'user', attributes: ['id', 'full_name'] }]
-        },
-        {
-          model: RepairLog,
-          as: 'repairLogs'
-        },
-        {
-          model: PartConsumed,
-          as: 'consumedParts',
-          include: [{ model: Part, as: 'part', attributes: ['id', 'part_number', 'name', 'unit_cost'] }]
-        },
-        {
-          model: BrokenPart,
-          as: 'brokenParts',
-          include: [{ model: User, as: 'reportedBy', attributes: ['id', 'full_name'] }]
-        },
-        {
-          model: QCCheckpoint,
-          as: 'qcCheckpoints',
-          include: [{ model: User, as: 'inspector', attributes: ['id', 'full_name', 'role', 'qc_affiliation'] }]
         }
       ],
-      order: [
-        ['updated_at', 'DESC']
-      ]
+      order: [['created_at', 'DESC']]
     });
 
-    // Populate assignedTechnician if stored as user_id or missing
-    for (const order of orders) {
-      if (!order.assignedTechnician && order.assigned_technician_id) {
-        let tech = await Technician.findOne({
-          where: { [Op.or]: [{ id: order.assigned_technician_id }, { user_id: order.assigned_technician_id }] },
-          include: [{ model: User, as: 'user', attributes: ['id', 'full_name'] }]
-        });
-        if (tech) {
-          order.setDataValue('assignedTechnician', tech);
+    const formattedOrders = await Promise.all(
+      orders.map(async (order) => {
+        const plainOrder = order.get ? order.get({ plain: true }) : { ...order };
+
+        // Populate assignedTechnician if missing
+        if (!plainOrder.assignedTechnician && plainOrder.assigned_technician_id) {
+          let tech = await Technician.findOne({
+            where: { [Op.or]: [{ id: plainOrder.assigned_technician_id }, { user_id: plainOrder.assigned_technician_id }] },
+            include: [{ model: User, as: 'user', attributes: ['id', 'full_name'] }]
+          }).catch(() => null);
+          if (tech) {
+            plainOrder.assignedTechnician = tech.get ? tech.get({ plain: true }) : tech;
+          }
         }
-      }
-    }
 
-    const formattedOrders = orders.map(order => {
-      const plainOrder = order.get ? order.get({ plain: true }) : { ...order };
-      if ((plainOrder.status === 'Intake' || !plainOrder.status) && (plainOrder.assigned_technician_id || plainOrder.assignedTechnician)) {
-        plainOrder.status = 'Teknisi Assigned';
-      }
-      return plainOrder;
-    });
+        try {
+          plainOrder.repairLogs = await RepairLog.findAll({
+            where: { service_order_id: plainOrder.id },
+            order: [['id', 'DESC']]
+          });
+        } catch (e) {
+          plainOrder.repairLogs = [];
+        }
+
+        try {
+          plainOrder.consumedParts = await PartConsumed.findAll({
+            where: { service_order_id: plainOrder.id },
+            include: [{ model: Part, as: 'part', attributes: ['id', 'part_number', 'name', 'unit_cost'] }]
+          });
+        } catch (e) {
+          plainOrder.consumedParts = [];
+        }
+
+        try {
+          plainOrder.brokenParts = await BrokenPart.findAll({
+            where: { service_order_id: plainOrder.id },
+            include: [{ model: User, as: 'reportedBy', attributes: ['id', 'full_name'] }]
+          });
+        } catch (e) {
+          plainOrder.brokenParts = [];
+        }
+
+        try {
+          plainOrder.qcCheckpoints = await QCCheckpoint.findAll({
+            where: { service_order_id: plainOrder.id },
+            include: [{ model: User, as: 'inspector', attributes: ['id', 'full_name', 'role', 'qc_affiliation'] }]
+          });
+        } catch (e) {
+          plainOrder.qcCheckpoints = [];
+        }
+
+        if ((plainOrder.status === 'Intake' || !plainOrder.status) && (plainOrder.assigned_technician_id || plainOrder.assignedTechnician)) {
+          plainOrder.status = 'Teknisi Assigned';
+        }
+
+        return plainOrder;
+      })
+    );
 
     return res.status(200).json({
       success: true,
