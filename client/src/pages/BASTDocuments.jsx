@@ -173,6 +173,13 @@ const BASTDocuments = () => {
     }
   };
 
+  // Find selected PIC user objects for signatures
+  const firstPartyUser = allUsers.find(u => String(u.id) === String(firstPartyPicId));
+  const secondPartyUser = allUsers.find(u => String(u.id) === String(secondPartyPicId));
+
+  const firstPartySignature = firstPartyUser?.signature_url || null;
+  const secondPartySignature = secondPartyUser?.signature_url || null;
+
   const handleSubmitBastToSea = async (overrideSignature = null) => {
     if (!reportItems || reportItems.length === 0) {
       setError('Tidak ada data unit intake harian yang dapat dikirim ke BAST.');
@@ -228,13 +235,6 @@ const BASTDocuments = () => {
   const handlePrint = () => {
     window.print();
   };
-
-  // Find selected PIC user objects for signatures
-  const firstPartyUser = allUsers.find(u => String(u.id) === String(firstPartyPicId));
-  const secondPartyUser = allUsers.find(u => String(u.id) === String(secondPartyPicId));
-
-  const firstPartySignature = firstPartyUser?.signature_url || null;
-  const secondPartySignature = secondPartyUser?.signature_url || null;
 
   // Date formatted strings
   const targetDateObj = bastType === '1' ? new Date(intakeDate) : new Date(endDate);
