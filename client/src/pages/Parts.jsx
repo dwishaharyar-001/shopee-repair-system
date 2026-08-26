@@ -3,6 +3,7 @@ import {
   Package, 
   Search, 
   Plus, 
+  Edit,
   RefreshCw, 
   AlertTriangle, 
   CheckCircle2, 
@@ -17,10 +18,12 @@ import { useAuth } from '../context/AuthContext';
 import { inventoryService } from '../services/inventoryService';
 import api from '../services/api';
 import AddPartModal from '../components/AddPartModal';
+import EditPartModal from '../components/EditPartModal';
 import HarvestPartModal from '../components/HarvestPartModal';
 
 const Parts = () => {
   const { user } = useAuth();
+  const isAdmin = user?.role === 'Admin';
   const isHidePrices = user?.role === 'Technician' || user?.role === 'QA_Liaison';
 
   const [activeTab, setActiveTab] = useState('inventory'); // 'inventory', 'harvest'
@@ -46,6 +49,8 @@ const Parts = () => {
 
   // Modals
   const [isAddOpen, setIsAddOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [selectedEditPart, setSelectedEditPart] = useState(null);
   const [isHarvestOpen, setIsHarvestOpen] = useState(false);
 
   useEffect(() => {
@@ -307,6 +312,7 @@ const Parts = () => {
                       <th className="py-3 px-4">Min Trigger</th>
                       {!isHidePrices && <th className="py-3 px-4">Harga Satuan (Rp)</th>}
                       <th className="py-3 px-4">Status Reorder</th>
+                      {isAdmin && <th className="py-3 px-4 text-center">Aksi (Admin)</th>}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -358,6 +364,21 @@ const Parts = () => {
                               </span>
                             )}
                           </td>
+                          {isAdmin && (
+                            <td className="py-3.5 px-4 text-center">
+                              <button
+                                onClick={() => {
+                                  setSelectedEditPart(item);
+                                  setIsEditOpen(true);
+                                }}
+                                className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-[11px] font-bold transition-all shadow-xs flex items-center space-x-1 mx-auto"
+                                title="Edit Spare Part (Khusus Admin Aplikasi)"
+                              >
+                                <Edit className="w-3.5 h-3.5" />
+                                <span>Edit</span>
+                              </button>
+                            </td>
+                          )}
                         </tr>
                       );
                     })}
@@ -431,6 +452,19 @@ const Parts = () => {
       <AddPartModal
         isOpen={isAddOpen}
         onClose={() => setIsAddOpen(false)}
+        onSuccess={(msg) => {
+          showToast(msg);
+          fetchData();
+        }}
+      />
+
+      <EditPartModal
+        isOpen={isEditOpen}
+        onClose={() => {
+          setIsEditOpen(false);
+          setSelectedEditPart(null);
+        }}
+        part={selectedEditPart}
         onSuccess={(msg) => {
           showToast(msg);
           fetchData();
