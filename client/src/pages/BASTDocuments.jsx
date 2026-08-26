@@ -104,24 +104,20 @@ const BASTDocuments = () => {
       if (picClientUsers.length > 0) {
         setFirstPartyPicId(picClientUsers[0].id);
         setFirstPartyTitle('Asset PIC - Client');
-        setFirstPartySignature(picClientUsers[0].signature_url || '');
       }
       if (picArisaUsers.length > 0) {
         setSecondPartyPicId(picArisaUsers[0].id);
         setSecondPartyTitle('Arisa Computer Team');
-        setSecondPartySignature(picArisaUsers[0].signature_url || '');
       }
     } else {
       // Arisa -> Client / Used Parts: First Party = Arisa, Second Party = Client
       if (picArisaUsers.length > 0) {
         setFirstPartyPicId(picArisaUsers[0].id);
         setFirstPartyTitle('Arisa Computer Team');
-        setFirstPartySignature(picArisaUsers[0].signature_url || '');
       }
       if (picClientUsers.length > 0) {
         setSecondPartyPicId(picClientUsers[0].id);
         setSecondPartyTitle('Asset PIC - Client');
-        setSecondPartySignature(picClientUsers[0].signature_url || '');
       }
     }
   }, [bastType, allUsers]);
