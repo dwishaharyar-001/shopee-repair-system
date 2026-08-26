@@ -578,7 +578,14 @@ const updateServiceOrder = async (req, res) => {
       }
 
       if (deviceChanged) {
-        await order.device.save();
+        try {
+          await order.device.save();
+        } catch (devErr) {
+          console.warn('Device save warning (asset_type fallback):', devErr.message);
+          try {
+            await order.device.save({ fields: ['serial_number', 'brand', 'model', 'customer_id'] });
+          } catch (e) {}
+        }
       }
     }
 

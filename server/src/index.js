@@ -231,7 +231,8 @@ const initDatabase = async () => {
       "ALTER TABLE users ADD COLUMN IF NOT EXISTS signature_url TEXT;",
       "ALTER TABLE users ADD COLUMN IF NOT EXISTS delete_status VARCHAR(20) DEFAULT 'none';",
       "ALTER TABLE users ADD COLUMN IF NOT EXISTS qc_affiliation VARCHAR(20) DEFAULT 'Arisa';",
-      "ALTER TABLE branches ADD COLUMN IF NOT EXISTS diagnostic_fee INTEGER DEFAULT 30000;"
+      "ALTER TABLE branches ADD COLUMN IF NOT EXISTS diagnostic_fee INTEGER DEFAULT 30000;",
+      "ALTER TABLE devices ADD COLUMN IF NOT EXISTS asset_type VARCHAR(100);"
     ];
 
     for (const q of directQueries) {
