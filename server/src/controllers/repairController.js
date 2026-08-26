@@ -21,21 +21,24 @@ const getWorkQueue = async (req, res) => {
 
     // Role-based flexible isolation for Technicians
     if (req.user && req.user.role === 'Technician') {
-      const tech = await Technician.findOne({ where: { user_id: req.user.id } });
-      const validTechIds = [req.user.id];
-      if (tech) validTechIds.push(tech.id);
+      const techs = await Technician.findAll({
+        where: { [Op.or]: [{ user_id: req.user.id }, { id: req.user.id }] }
+      });
+      const validTechIds = new Set([req.user.id]);
+      techs.forEach(t => {
+        validTechIds.add(t.id);
+        if (t.user_id) validTechIds.add(t.user_id);
+      });
 
-      whereClause[Op.or] = [
-        { assigned_technician_id: { [Op.in]: validTechIds } },
-        { '$assignedTechnician.user_id$': req.user.id }
-      ];
+      whereClause.assigned_technician_id = { [Op.in]: Array.from(validTechIds) };
     } else if (technician_id) {
       const techObj = await Technician.findByPk(technician_id);
-      const userId = techObj ? techObj.user_id : technician_id;
-      whereClause[Op.or] = [
-        { assigned_technician_id: parseInt(technician_id) },
-        { assigned_technician_id: userId }
-      ];
+      const validTechIds = new Set([parseInt(technician_id)]);
+      if (techObj) {
+        validTechIds.add(techObj.id);
+        if (techObj.user_id) validTechIds.add(techObj.user_id);
+      }
+      whereClause.assigned_technician_id = { [Op.in]: Array.from(validTechIds) };
     }
 
     const orders = await ServiceOrder.findAll({
