@@ -662,19 +662,25 @@ const getDashboardStats = async (req, res) => {
     }
 
     const totalDevices = await Device.count();
-    const activeInRepair = await ServiceOrder.count({
-      where: {
-        ...orderWhere,
-        status: {
-          [Op.in]: ['Intake', 'Teknisi Assigned', 'In Repair', 'Rework', 'QC1 Pending', 'QC2 Pending']
+
+    const allOrders = await ServiceOrder.findAll({
+      where: orderWhere,
+      order: [['created_at', 'DESC']],
+      include: [
+        { model: Device, as: 'device' },
+        { model: Customer, as: 'customer' },
+        { model: Branch, as: 'branch' },
+        {
+          model: Technician,
+          as: 'assignedTechnician',
+          include: [{ model: User, as: 'user', attributes: ['id', 'full_name'] }]
         }
-      }
+      ]
     });
 
-    const totalOrders = await ServiceOrder.count({ where: orderWhere });
-    const releasedOrders = await ServiceOrder.count({
-      where: { ...orderWhere, status: 'Released' }
-    });
+    const activeInRepair = allOrders.filter(o => o.status !== 'Released').length;
+    const releasedOrders = allOrders.filter(o => o.status === 'Released').length;
+    const totalOrders = allOrders.length;
 
     // QC Pass rate calculation from QCCheckpoint
     let qcPassRate = '0.0%';
@@ -689,24 +695,8 @@ const getDashboardStats = async (req, res) => {
       }
     } catch (e) {}
 
-    const recentOrders = await ServiceOrder.findAll({
-      where: orderWhere,
-      limit: 10,
-      order: [['created_at', 'DESC']],
-      include: [
-        { model: Device, as: 'device' },
-        { model: Customer, as: 'customer' },
-        { model: Branch, as: 'branch' },
-        {
-          model: Technician,
-          as: 'assignedTechnician',
-          include: [{ model: User, as: 'user', attributes: ['id', 'full_name'] }]
-        }
-      ]
-    });
-
     // Format recent orders so assigned intake orders display 'Teknisi Assigned'
-    const formattedRecentOrders = recentOrders.map(order => {
+    const formattedRecentOrders = allOrders.slice(0, 10).map(order => {
       const plainOrder = order.get ? order.get({ plain: true }) : { ...order };
       if ((plainOrder.status === 'Intake' || !plainOrder.status) && (plainOrder.assigned_technician_id || plainOrder.assignedTechnician)) {
         plainOrder.status = 'Teknisi Assigned';
@@ -715,13 +705,7 @@ const getDashboardStats = async (req, res) => {
     });
 
     // Find latest Rework order for SLA timer card if any
-    const reworkOrder = await ServiceOrder.findOne({
-      where: { status: 'Rework' },
-      include: [
-        { model: Device, as: 'device' }
-      ],
-      order: [['updated_at', 'DESC']]
-    });
+    const reworkOrder = allOrders.find(o => o.status === 'Rework') || null;
 
     return res.status(200).json({
       success: true,

@@ -14,8 +14,6 @@ const getWorkQueue = async (req, res) => {
     let whereClause = {};
     if (status) {
       whereClause.status = status;
-    } else {
-      whereClause.status = { [Op.ne]: 'Released' };
     }
 
     // Role-based strict isolation: Technician only sees own assigned devices; Coordinator/Admin see ALL
@@ -78,8 +76,10 @@ const getWorkQueue = async (req, res) => {
       order: [['created_at', 'DESC']]
     });
 
+    const activeOrders = status ? orders : orders.filter(o => o.status !== 'Released');
+
     const formattedOrders = await Promise.all(
-      orders.map(async (order) => {
+      activeOrders.map(async (order) => {
         const plainOrder = order.get ? order.get({ plain: true }) : { ...order };
 
         // Populate assignedTechnician if missing
