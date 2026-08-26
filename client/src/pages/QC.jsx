@@ -233,8 +233,8 @@ const QC = () => {
           pendingBasts.length === 0 ? (
             <div className="p-12 text-center text-slate-400 space-y-2">
               <CheckCircle2 className="w-10 h-10 mx-auto text-emerald-400" />
-              <p className="font-semibold text-slate-600 text-sm">Tidak ada dokumen BAST intake harian yang memerlukan verifikasi QC SEA saat ini.</p>
-              <p className="text-xs">Semua BAST intake yang dikirim oleh Coordinator Arisa telah terverifikasi.</p>
+              <p className="font-semibold text-slate-600 text-sm">Belum ada dokumen BAST intake harian yang terdaftar saat ini.</p>
+              <p className="text-xs">Dokumen BAST intake harian yang dikirim oleh Coordinator Arisa akan otomatis terdaftar di sini.</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -245,44 +245,81 @@ const QC = () => {
                     <th className="py-3 px-4">Tanggal Intake</th>
                     <th className="py-3 px-4">Jumlah Perangkat</th>
                     <th className="py-3 px-4">First Party (Coordinator)</th>
-                    <th className="py-3 px-4">Status Dokumen</th>
-                    <th className="py-3 px-4 text-center">Aksi Verifikasi</th>
+                    <th className="py-3 px-4">Status Dokumen BAST</th>
+                    <th className="py-3 px-4 text-center">Aksi Verifikasi / Detail</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {pendingBasts.map((bast) => (
-                    <tr key={bast.id} className="hover:bg-slate-50/80 transition-colors">
-                      <td className="py-3.5 px-4 font-mono font-bold text-slate-900">
-                        {bast.bast_number}
-                      </td>
-                      <td className="py-3.5 px-4 font-semibold text-slate-800">
-                        {bast.intake_date || new Date(bast.created_at).toLocaleDateString('id-ID')}
-                      </td>
-                      <td className="py-3.5 px-4 font-bold text-blue-900 font-mono">
-                        {bast.items?.length || 0} Unit Perangkat
-                      </td>
-                      <td className="py-3.5 px-4 font-medium text-slate-700">
-                        {bast.firstPartyUser?.full_name || 'Coordinator Arisa'}
-                      </td>
-                      <td className="py-3.5 px-4">
-                        <span className="px-2.5 py-1 rounded-full text-[10px] font-bold border bg-amber-50 text-amber-800 border-amber-300">
-                          Menunggu Verifikasi QC SEA
-                        </span>
-                      </td>
-                      <td className="py-3.5 px-4 text-center">
-                        <button
-                          onClick={() => {
-                            setSelectedBastId(bast.id);
-                            setIsSeaBastModalOpen(true);
-                          }}
-                          className="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-purple-600/20 flex items-center space-x-1.5 mx-auto"
-                        >
-                          <ShieldCheck className="w-4 h-4" />
-                          <span>Verifikasi BAST Per Item</span>
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                  {pendingBasts.map((bast) => {
+                    const isPending = bast.status === 'Submitted_to_SEA';
+                    const isApproved = bast.status === 'Approved_SEA';
+                    const isRevision = bast.status === 'Revision_Requested';
+
+                    return (
+                      <tr key={bast.id} className="hover:bg-slate-50/80 transition-colors">
+                        <td className="py-3.5 px-4 font-mono font-bold text-slate-900">
+                          {bast.bast_number}
+                        </td>
+                        <td className="py-3.5 px-4 font-semibold text-slate-800">
+                          {bast.intake_date || new Date(bast.created_at).toLocaleDateString('id-ID')}
+                        </td>
+                        <td className="py-3.5 px-4 font-bold text-blue-900 font-mono">
+                          {bast.items?.length || 0} Unit Perangkat
+                        </td>
+                        <td className="py-3.5 px-4 font-medium text-slate-700">
+                          {bast.firstPartyUser?.full_name || 'Coordinator Arisa'}
+                        </td>
+                        <td className="py-3.5 px-4">
+                          {isPending ? (
+                            <span className="px-2.5 py-1 rounded-full text-[10px] font-bold border bg-amber-50 text-amber-800 border-amber-300 inline-flex items-center space-x-1">
+                              <span>⏳ Menunggu Verifikasi QC Client</span>
+                            </span>
+                          ) : isApproved ? (
+                            <span className="px-2.5 py-1 rounded-full text-[10px] font-bold border bg-emerald-50 text-emerald-800 border-emerald-300 inline-flex items-center space-x-1">
+                              <span>✅ Terverifikasi (Approved)</span>
+                            </span>
+                          ) : isRevision ? (
+                            <span className="px-2.5 py-1 rounded-full text-[10px] font-bold border bg-rose-50 text-rose-800 border-rose-300 inline-flex items-center space-x-1">
+                              <span>⚠️ Minta Revisi BAST</span>
+                            </span>
+                          ) : (
+                            <span className="px-2.5 py-1 rounded-full text-[10px] font-bold border bg-slate-100 text-slate-700 border-slate-300">
+                              {bast.status}
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-3.5 px-4 text-center">
+                          {isPending ? (
+                            <button
+                              onClick={() => {
+                                setSelectedBastId(bast.id);
+                                setIsSeaBastModalOpen(true);
+                              }}
+                              className="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-purple-600/20 flex items-center space-x-1.5 mx-auto"
+                            >
+                              <ShieldCheck className="w-4 h-4" />
+                              <span>Verifikasi BAST Per Item</span>
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                setSelectedBastId(bast.id);
+                                setIsSeaBastModalOpen(true);
+                              }}
+                              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5 mx-auto ${
+                                isApproved
+                                  ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm'
+                                  : 'bg-rose-600 hover:bg-rose-700 text-white shadow-sm'
+                              }`}
+                            >
+                              {isApproved ? <CheckCircle2 className="w-3.5 h-3.5" /> : <AlertTriangle className="w-3.5 h-3.5" />}
+                              <span>{isApproved ? 'Lihat Detail (Approved)' : 'Lihat Catatan Revisi'}</span>
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

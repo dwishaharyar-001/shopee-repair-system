@@ -165,8 +165,12 @@ const createBast = async (req, res) => {
  */
 const getPendingSeaBasts = async (req, res) => {
   try {
-    const { branch_id } = req.query;
-    let whereClause = { status: 'Submitted_to_SEA' };
+    const { branch_id, status } = req.query;
+    let whereClause = { bast_type: '1' };
+
+    if (status) {
+      whereClause.status = status;
+    }
 
     if (branch_id) {
       whereClause.branch_id = branch_id;
