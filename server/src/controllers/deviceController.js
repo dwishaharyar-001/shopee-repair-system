@@ -510,16 +510,25 @@ const updateServiceOrder = async (req, res) => {
       }
 
       let targetTechId = parseInt(assigned_technician_id);
-      const techByPk = await Technician.findByPk(targetTechId);
-      if (!techByPk) {
-        const techByUser = await Technician.findOne({ where: { user_id: targetTechId } });
-        if (techByUser) {
-          targetTechId = techByUser.id;
+      let techObj = await Technician.findByPk(targetTechId);
+      if (!techObj) {
+        techObj = await Technician.findOne({ where: { user_id: targetTechId } });
+      }
+      if (!techObj) {
+        const targetUser = await User.findByPk(targetTechId);
+        if (targetUser) {
+          techObj = await Technician.create({
+            user_id: targetUser.id,
+            full_name: targetUser.full_name,
+            employee_code: `TECH-${String(targetUser.id).padStart(3, '0')}`,
+            is_active: true
+          }).catch(() => null);
         }
       }
 
-      order.assigned_technician_id = targetTechId;
-      if (targetTechId && !order.assigned_tech_at) {
+      const finalTechId = techObj ? techObj.id : targetTechId;
+      order.assigned_technician_id = finalTechId;
+      if (finalTechId && !order.assigned_tech_at) {
         order.assigned_tech_at = new Date();
       }
     } else if (assigned_technician_id === null || assigned_technician_id === '') {

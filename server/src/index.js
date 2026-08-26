@@ -294,6 +294,22 @@ const initDatabase = async () => {
       console.log('✅ Synchronized service_orders bast_status & technician assignment.');
     } catch (e) {}
 
+    try {
+      const techUsers = await User.findAll({ where: { role: 'Technician' } });
+      for (const u of techUsers) {
+        const existing = await Technician.findOne({ where: { user_id: u.id } });
+        if (!existing) {
+          await Technician.create({
+            user_id: u.id,
+            full_name: u.full_name,
+            employee_code: `TECH-${String(u.id).padStart(3, '0')}`,
+            is_active: true
+          }).catch(() => {});
+        }
+      }
+      console.log('✅ Auto-healed Technician profiles for all Technician users.');
+    } catch (e) {}
+
     await ensureDefaultBranches();
     await ensureDefaultPermissions();
     await ensureDefaultUsers();

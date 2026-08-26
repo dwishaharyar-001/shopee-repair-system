@@ -21,10 +21,21 @@ const getWorkQueue = async (req, res) => {
 
     // Role-based flexible isolation for Technicians
     if (req.user && req.user.role === 'Technician') {
+      let tech = await Technician.findOne({ where: { user_id: req.user.id } });
+      if (!tech) {
+        tech = await Technician.create({
+          user_id: req.user.id,
+          full_name: req.user.full_name,
+          employee_code: `TECH-${String(req.user.id).padStart(3, '0')}`,
+          is_active: true
+        }).catch(() => null);
+      }
+
       const techs = await Technician.findAll({
         where: { [Op.or]: [{ user_id: req.user.id }, { id: req.user.id }] }
       });
       const validTechIds = new Set([req.user.id]);
+      if (tech) validTechIds.add(tech.id);
       techs.forEach(t => {
         validTechIds.add(t.id);
         if (t.user_id) validTechIds.add(t.user_id);

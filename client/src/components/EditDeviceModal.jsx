@@ -53,7 +53,7 @@ const EditDeviceModal = ({ isOpen, onClose, order, onSuccess }) => {
       const usersRes = await api.get('/auth/users');
       if (usersRes.data && usersRes.data.success) {
         const techList = usersRes.data.data
-          .filter(u => u.role === 'Technician' && u.is_active && u.branch_id && (u.technicianProfile || u.technician))
+          .filter(u => u.role === 'Technician' && u.is_active)
           .map(u => {
             const prof = u.technicianProfile || u.technician || {};
             return {
