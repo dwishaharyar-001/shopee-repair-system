@@ -278,6 +278,15 @@ const initDatabase = async () => {
           WHERE bi.device_id = service_orders.device_id
         );
       `);
+      await sequelize.query(`
+        UPDATE service_orders 
+        SET bast_status = 'Approved_SEA' 
+        WHERE EXISTS (
+          SELECT 1 
+          FROM bast_documents bd 
+          WHERE bd.status = 'Approved_SEA' AND bd.bast_type = '1'
+        );
+      `);
       console.log('✅ Synchronized service_orders bast_status to Approved_SEA.');
     } catch (e) {}
 

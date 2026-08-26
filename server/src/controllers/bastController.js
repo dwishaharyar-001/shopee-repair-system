@@ -356,22 +356,39 @@ const verifyBastBySea = async (req, res) => {
       await bast.save();
 
       // Unlock linked Service Orders for Technician Distribution
-      const itemServiceOrderIds = bast.items.map(i => i.service_order_id);
-      await ServiceOrder.update(
-        { bast_status: 'Approved_SEA' },
-        { where: { id: itemServiceOrderIds } }
-      );
+      const itemServiceOrderIds = (bast.items || []).map(i => i.service_order_id).filter(Boolean);
+      const itemDeviceIds = (bast.items || []).map(i => i.device_id).filter(Boolean);
+
+      let orderWhereClause = [];
+      if (itemServiceOrderIds.length > 0) orderWhereClause.push({ id: itemServiceOrderIds });
+      if (itemDeviceIds.length > 0) orderWhereClause.push({ device_id: itemDeviceIds });
+
+      if (bast.bast_type === '1' && bast.intake_date) {
+        const targetDate = bast.intake_date;
+        const startOfDay = new Date(`${targetDate}T00:00:00.000Z`);
+        const endOfDay = new Date(`${targetDate}T23:59:59.999Z`);
+        orderWhereClause.push({ intake_date: { [Op.between]: [startOfDay, endOfDay] } });
+        orderWhereClause.push({ created_at: { [Op.between]: [startOfDay, endOfDay] } });
+      }
+
+      if (orderWhereClause.length > 0) {
+        await ServiceOrder.update(
+          { bast_status: 'Approved_SEA' },
+          { where: { [Op.or]: orderWhereClause } }
+        );
+      }
     } else {
       bast.status = 'Revision_Requested';
       bast.rejection_reason = rejection_reason || 'Diperlukan revisi data/fisik perangkat oleh Coordinator Arisa.';
       await bast.save();
 
-      // Update Service Orders back to Revision_Requested
-      const itemServiceOrderIds = bast.items.map(i => i.service_order_id);
-      await ServiceOrder.update(
-        { bast_status: 'Revision_Requested' },
-        { where: { id: itemServiceOrderIds } }
-      );
+      const itemServiceOrderIds = (bast.items || []).map(i => i.service_order_id).filter(Boolean);
+      if (itemServiceOrderIds.length > 0) {
+        await ServiceOrder.update(
+          { bast_status: 'Revision_Requested' },
+          { where: { id: itemServiceOrderIds } }
+        );
+      }
     }
 
     const updatedBast = await BastDocument.findByPk(id, {
