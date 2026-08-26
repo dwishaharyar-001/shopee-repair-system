@@ -299,8 +299,7 @@ const EditDeviceModal = ({ isOpen, onClose, order, onSuccess }) => {
                 name="assigned_technician_id"
                 value={formData.assigned_technician_id}
                 onChange={handleChange}
-                disabled={order?.bast_status !== 'Approved_SEA' && order?.bast_status !== 'Verified_By_SEA'}
-                className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-medium text-slate-800 focus:ring-2 focus:ring-emerald-500 focus:outline-none disabled:opacity-60 disabled:cursor-not-allowed"
+                className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-medium text-slate-800 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
               >
                 <option value="">-- Belum Ditugaskan (Unassigned) --</option>
                 {technicians

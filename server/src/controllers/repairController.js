@@ -53,7 +53,15 @@ const getWorkQueue = async (req, res) => {
       }
 
       const idArray = Array.from(validTechIds).map(id => parseInt(id)).filter(Boolean);
-      whereClause.assigned_technician_id = { [Op.in]: idArray };
+      
+      let userBranchId = req.user.branch_id || (tech ? tech.branch_id : null);
+      let orConditions = [{ assigned_technician_id: { [Op.in]: idArray } }];
+
+      if (userBranchId) {
+        orConditions.push({ branch_id: userBranchId });
+      }
+
+      whereClause[Op.or] = orConditions;
     } else if (technician_id) {
       const techObj = await Technician.findByPk(technician_id);
       const validTechIds = new Set([parseInt(technician_id)]);
