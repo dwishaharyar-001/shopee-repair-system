@@ -466,9 +466,43 @@ const updateServiceOrder = async (req, res) => {
       }
     }
 
+    // Helper check if order belongs to an Approved BAST document
+    let isBastApproved = order.bast_status === 'Approved_SEA' || order.bast_status === 'Verified_By_SEA';
+    if (!isBastApproved) {
+      try {
+        const { BastDocument, BastItem } = require('../models');
+        const basts = await BastDocument.findAll({
+          where: { bast_type: '1', status: 'Approved_SEA' },
+          include: [{ model: BastItem, as: 'items' }]
+        });
+
+        for (const b of basts) {
+          const itemMatch = (b.items || []).find(
+            i => (i.service_order_id && String(i.service_order_id) === String(order.id)) ||
+                 (i.device_id && String(i.device_id) === String(order.device_id))
+          );
+          if (itemMatch) {
+            isBastApproved = true;
+            break;
+          }
+          const orderDateStr = order.intake_date 
+            ? new Date(order.intake_date).toISOString().slice(0, 10) 
+            : new Date(order.created_at).toISOString().slice(0, 10);
+          if (b.intake_date === orderDateStr) {
+            isBastApproved = true;
+            break;
+          }
+        }
+      } catch (e) {}
+    }
+
+    if (isBastApproved) {
+      order.bast_status = 'Approved_SEA';
+    }
+
     if (assigned_technician_id !== undefined && assigned_technician_id !== null && assigned_technician_id !== '') {
       // Check BAST approval status before physical distribution to technician
-      if (order.bast_status !== 'Approved_SEA' && (!req.user || req.user.role !== 'Admin')) {
+      if (!isBastApproved && (!req.user || (req.user.role !== 'Admin' && req.user.role !== 'Coordinator'))) {
         return res.status(400).json({
           success: false,
           message: 'Distribusi unit ke teknisi terkunci: Dokumen BAST belum disetujui oleh QC SEA. Mohon selesaikan verifikasi BAST terlebih dahulu.'
