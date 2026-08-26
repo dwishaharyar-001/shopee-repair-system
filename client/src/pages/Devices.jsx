@@ -346,7 +346,7 @@ const Devices = () => {
                     <th className="py-3 px-4">Customer</th>
                     <th className="py-3 px-4">Teknisi</th>
                     <th className="py-3 px-4">Status Svc</th>
-                    <th className="py-3 px-4">BAST QC SEA</th>
+                    <th className="py-3 px-4">Status BAST Intake (Client)</th>
                     <th className="py-3 px-4 text-center">Aksi</th>
                   </tr>
                 </thead>
@@ -391,9 +391,9 @@ const Devices = () => {
                       <td className="py-3.5 px-4">
                         <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border ${getBastBadgeClass(row.bast_status)}`}>
                           {row.bast_status === 'Approved_SEA'
-                            ? 'Approved SEA'
+                            ? 'Approved Client'
                             : row.bast_status === 'Submitted_to_SEA'
-                            ? 'Pending SEA'
+                            ? 'Pending Client'
                             : row.bast_status === 'Revision_Requested'
                             ? 'Perlu Revisi'
                             : 'Belum BAST'}
