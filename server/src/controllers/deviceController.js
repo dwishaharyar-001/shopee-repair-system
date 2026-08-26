@@ -633,38 +633,9 @@ const getDevices = async (req, res) => {
 // 7. Get Real Dashboard Stats from Database
 const getDashboardStats = async (req, res) => {
   try {
-    let orderWhere = {};
-    if (req.user && req.user.role === 'Technician') {
-      let tech = await Technician.findOne({ where: { user_id: req.user.id } });
-      const validTechIds = new Set([req.user.id]);
-      if (tech) validTechIds.add(tech.id);
-
-      const techsByUserId = await Technician.findAll({
-        where: { [Op.or]: [{ user_id: req.user.id }, { id: req.user.id }] }
-      });
-      techsByUserId.forEach(t => {
-        validTechIds.add(t.id);
-        if (t.user_id) validTechIds.add(t.user_id);
-      });
-
-      if (req.user.full_name) {
-        const techsByName = await Technician.findAll({
-          where: { full_name: req.user.full_name }
-        });
-        techsByName.forEach(t => {
-          validTechIds.add(t.id);
-          if (t.user_id) validTechIds.add(t.user_id);
-        });
-      }
-
-      const idArray = Array.from(validTechIds).map(id => parseInt(id)).filter(Boolean);
-      orderWhere.assigned_technician_id = { [Op.in]: idArray };
-    }
-
     const totalDevices = await Device.count();
 
-    const allOrders = await ServiceOrder.findAll({
-      where: orderWhere,
+    let allOrders = await ServiceOrder.findAll({
       order: [['created_at', 'DESC']],
       include: [
         { model: Device, as: 'device' },
@@ -677,6 +648,67 @@ const getDashboardStats = async (req, res) => {
         }
       ]
     });
+
+    // Populate assignedTechnician if missing
+    for (const order of allOrders) {
+      if (!order.assignedTechnician && order.assigned_technician_id) {
+        const targetId = parseInt(order.assigned_technician_id);
+        if (!isNaN(targetId)) {
+          let tech = await Technician.findOne({
+            where: { [Op.or]: [{ id: targetId }, { user_id: targetId }] },
+            include: [{ model: User, as: 'user', attributes: ['id', 'full_name'] }]
+          }).catch(() => null);
+          if (tech) {
+            order.setDataValue('assignedTechnician', tech);
+          }
+        }
+      }
+    }
+
+    // Strict JS memory filter for Technician role
+    if (req.user && req.user.role === 'Technician') {
+      let tech = await Technician.findOne({ where: { user_id: req.user.id } }).catch(() => null);
+      const validTechIds = new Set([req.user.id]);
+      if (tech) {
+        validTechIds.add(tech.id);
+        if (tech.user_id) validTechIds.add(tech.user_id);
+      }
+      try {
+        const techsByUserId = await Technician.findAll({
+          where: { [Op.or]: [{ user_id: req.user.id }, { id: req.user.id }] }
+        });
+        techsByUserId.forEach(t => {
+          validTechIds.add(t.id);
+          if (t.user_id) validTechIds.add(t.user_id);
+        });
+      } catch (e) {}
+
+      if (req.user.full_name) {
+        try {
+          const techsByName = await Technician.findAll({
+            where: { full_name: req.user.full_name }
+          });
+          techsByName.forEach(t => {
+            validTechIds.add(t.id);
+            if (t.user_id) validTechIds.add(t.user_id);
+          });
+        } catch (e) {}
+      }
+
+      const idArray = Array.from(validTechIds).map(id => parseInt(id)).filter(id => !isNaN(id));
+
+      allOrders = allOrders.filter(order => {
+        const plainTechId = order.assigned_technician_id ? parseInt(order.assigned_technician_id) : null;
+        const assignedTechObjId = order.assignedTechnician ? parseInt(order.assignedTechnician.id) : null;
+        const assignedUserId = order.assignedTechnician && order.assignedTechnician.user_id ? parseInt(order.assignedTechnician.user_id) : null;
+
+        return (
+          (plainTechId !== null && idArray.includes(plainTechId)) ||
+          (assignedTechObjId !== null && idArray.includes(assignedTechObjId)) ||
+          (assignedUserId !== null && idArray.includes(assignedUserId))
+        );
+      });
+    }
 
     const activeInRepair = allOrders.filter(o => o.status !== 'Released').length;
     const releasedOrders = allOrders.filter(o => o.status === 'Released').length;
