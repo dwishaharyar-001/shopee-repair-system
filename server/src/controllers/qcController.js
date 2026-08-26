@@ -174,64 +174,55 @@ const startQC2 = async (req, res) => {
 const submitQC2 = async (req, res) => {
   try {
     const { id } = req.params;
-    const { results = {}, overall_result, failure_reason, rework_notes } = req.body;
-    const inspector_id = req.user ? req.user.id : null;
+    const {
+      service_order_id,
+      functional_test,
+      physical_cosmetic_test,
+      os_firmware_test,
+      overall_result,
+      failure_reason,
+      rework_notes
+    } = req.body;
 
-    const order = await ServiceOrder.findByPk(id);
+    const targetOrderId = id || service_order_id;
+    const order = await ServiceOrder.findByPk(targetOrderId);
     if (!order) {
       return res.status(404).json({ success: false, message: 'Service Order tidak ditemukan.' });
     }
 
-    const qcCode = generateQCCode();
+    const inspector_id = req.user ? req.user.id : 1;
+    const count = await QCCheckpoint.count();
+    const qcCode = generateQCCode(count + 1);
     const passed = overall_result === 'Passed';
     const finishedAt = new Date();
 
+    if (!order.qc2_started_at) order.qc2_started_at = finishedAt;
+    order.qc2_finished_at = finishedAt;
+
     const checkpoint = await QCCheckpoint.create({
-      service_order_id: order.id,
-      checkpoint_type: 'qc2',
       qc_code: qcCode,
+      service_order_id: order.id,
+      checkpoint_type: 'Checkpoint 2',
       inspector_id,
-      passed,
-      results,
+      power_test: functional_test || 'Pass',
+      display_test: physical_cosmetic_test || 'Pass',
+      keyboard_test: os_firmware_test || 'Pass',
+      overall_result: passed ? 'Passed' : 'Rejected',
       failure_reason: passed ? null : failure_reason,
-      rework_notes: passed ? null : rework_notes,
-      started_at: order.qc2_started_at || finishedAt,
-      finished_at: finishedAt
+      rework_notes: rework_notes || null,
+      qc_date: finishedAt
     });
 
     if (passed) {
       order.status = 'Released';
-      order.qc2_passed = true;
-    } else {
-      order.status = 'Rework';
-      order.qc2_passed = false;
-      order.rework_count = (order.rework_count || 0) + 1;
-    }
-    order.qc2_finished_at = finishedAt;
-    await order.save();
-
-    return res.status(200).json({
-      success: true,
-      message: `Audit QC2 Final '${qcCode}' berhasil disimpan! Status unit saat ini: '${order.status}'.`,
-      inspector_id: req.user ? req.user.id : 1,
-      functional_test: functional_test || 'Pass',
-      physical_cosmetic_test: physical_cosmetic_test || 'Pass',
-      os_firmware_test: os_firmware_test || 'Pass',
-      overall_result,
-      rework_notes: rework_notes || null,
-      qc_date: new Date()
-    });
-
-    if (overall_result === 'Passed') {
-      order.status = 'Released';
-      order.released_date = new Date();
+      order.released_date = finishedAt;
       await order.save();
     } else {
       order.status = 'Rework';
       await order.save();
 
       const repairLog = await RepairLog.findOne({
-        where: { service_order_id },
+        where: { service_order_id: order.id },
         order: [['created_at', 'DESC']]
       });
 
@@ -243,9 +234,9 @@ const submitQC2 = async (req, res) => {
       }
     }
 
-    return res.status(201).json({
+    return res.status(200).json({
       success: true,
-      message: `Audit QC2 Shopee '${qcCode}' berhasil disimpan! Status unit saat ini: '${order.status}'.`,
+      message: `Audit QC2 Shopee Final '${qcCode}' berhasil disimpan! Status unit saat ini: '${order.status}'.`,
       data: { checkpoint, order }
     });
   } catch (error) {
