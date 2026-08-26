@@ -164,6 +164,13 @@ const createBranch = async (req, res) => {
       });
     }
 
+    // Fix PostgreSQL sequence if needed
+    if (sequelize.getDialect() === 'postgres') {
+      try {
+        await sequelize.query(`SELECT setval(pg_get_serial_sequence('branches', 'id'), COALESCE(max(id), 1)) FROM branches;`);
+      } catch (seqErr) {}
+    }
+
     const branch = await Branch.create({
       name: name.trim(),
       code: formattedCode,
