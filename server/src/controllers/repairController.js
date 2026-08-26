@@ -18,11 +18,11 @@ const getWorkQueue = async (req, res) => {
 
     // Role-based strict isolation: Technician only sees own assigned devices; Coordinator/Admin see ALL
     if (req.user && req.user.role === 'Technician') {
-      let tech = await Technician.findOne({ where: { user_id: req.user.id } });
+      let tech = await Technician.findOne({ where: { user_id: req.user.id } }).catch(() => null);
       if (!tech) {
         tech = await Technician.create({
           user_id: req.user.id,
-          full_name: req.user.full_name,
+          full_name: req.user.full_name || 'Technician',
           employee_code: `TECH-${String(req.user.id).padStart(3, '0')}`,
           is_active: true
         }).catch(() => null);
@@ -31,65 +31,96 @@ const getWorkQueue = async (req, res) => {
       const validTechIds = new Set([req.user.id]);
       if (tech) validTechIds.add(tech.id);
 
-      const techsByUserId = await Technician.findAll({
-        where: { [Op.or]: [{ user_id: req.user.id }, { id: req.user.id }] }
-      });
-      techsByUserId.forEach(t => {
-        validTechIds.add(t.id);
-        if (t.user_id) validTechIds.add(t.user_id);
-      });
-
-      if (req.user.full_name) {
-        const techsByName = await Technician.findAll({
-          where: { full_name: req.user.full_name }
+      try {
+        const techsByUserId = await Technician.findAll({
+          where: { [Op.or]: [{ user_id: req.user.id }, { id: req.user.id }] }
         });
-        techsByName.forEach(t => {
+        techsByUserId.forEach(t => {
           validTechIds.add(t.id);
           if (t.user_id) validTechIds.add(t.user_id);
         });
+      } catch (e) {}
+
+      if (req.user.full_name) {
+        try {
+          const techsByName = await Technician.findAll({
+            where: { full_name: req.user.full_name }
+          });
+          techsByName.forEach(t => {
+            validTechIds.add(t.id);
+            if (t.user_id) validTechIds.add(t.user_id);
+          });
+        } catch (e) {}
       }
 
-      const idArray = Array.from(validTechIds).map(id => parseInt(id)).filter(Boolean);
-      whereClause.assigned_technician_id = { [Op.in]: idArray };
-    } else if (technician_id) {
-      const techObj = await Technician.findByPk(technician_id);
-      const validTechIds = new Set([parseInt(technician_id)]);
-      if (techObj) {
-        validTechIds.add(techObj.id);
-        if (techObj.user_id) validTechIds.add(techObj.user_id);
+      const idArray = Array.from(validTechIds).map(id => parseInt(id)).filter(id => !isNaN(id));
+      if (idArray.length > 0) {
+        whereClause.assigned_technician_id = { [Op.in]: idArray };
       }
-      whereClause.assigned_technician_id = { [Op.in]: Array.from(validTechIds) };
+    } else if (technician_id) {
+      const parsedTechId = parseInt(technician_id);
+      if (!isNaN(parsedTechId)) {
+        const techObj = await Technician.findByPk(parsedTechId).catch(() => null);
+        const validTechIds = new Set([parsedTechId]);
+        if (techObj) {
+          validTechIds.add(techObj.id);
+          if (techObj.user_id) validTechIds.add(techObj.user_id);
+        }
+        whereClause.assigned_technician_id = { [Op.in]: Array.from(validTechIds) };
+      }
     }
 
-    const orders = await ServiceOrder.findAll({
-      where: whereClause,
-      include: [
-        { model: Device, as: 'device' },
-        { model: Customer, as: 'customer', attributes: ['id', 'customer_code', 'name'] },
-        { model: Branch, as: 'branch', attributes: ['id', 'name', 'code', 'address'] },
-        {
-          model: Technician,
-          as: 'assignedTechnician',
-          include: [{ model: User, as: 'user', attributes: ['id', 'full_name'] }]
-        }
-      ],
-      order: [['created_at', 'DESC']]
-    });
+    let orders = [];
+    try {
+      orders = await ServiceOrder.findAll({
+        where: whereClause,
+        include: [
+          { model: Device, as: 'device' },
+          { model: Customer, as: 'customer', attributes: ['id', 'customer_code', 'name'] },
+          { model: Branch, as: 'branch', attributes: ['id', 'name', 'code', 'address'] },
+          {
+            model: Technician,
+            as: 'assignedTechnician',
+            include: [{ model: User, as: 'user', attributes: ['id', 'full_name'] }]
+          }
+        ],
+        order: [['created_at', 'DESC']]
+      });
+    } catch (e) {
+      console.error('ServiceOrder.findAll error in getWorkQueue:', e.message);
+      orders = await ServiceOrder.findAll({
+        include: [
+          { model: Device, as: 'device' },
+          { model: Customer, as: 'customer' }
+        ],
+        order: [['created_at', 'DESC']]
+      }).catch(() => []);
+    }
 
     const activeOrders = status ? orders : orders.filter(o => o.status !== 'Released');
 
     const formattedOrders = await Promise.all(
       activeOrders.map(async (order) => {
-        const plainOrder = order.get ? order.get({ plain: true }) : { ...order };
+        let plainOrder = {};
+        try {
+          plainOrder = order.get ? order.get({ plain: true }) : { ...order };
+        } catch (e) {
+          plainOrder = { ...order };
+        }
 
-        // Populate assignedTechnician if missing
+        // Populate assignedTechnician safely if missing
         if (!plainOrder.assignedTechnician && plainOrder.assigned_technician_id) {
-          let tech = await Technician.findOne({
-            where: { [Op.or]: [{ id: plainOrder.assigned_technician_id }, { user_id: plainOrder.assigned_technician_id }] },
-            include: [{ model: User, as: 'user', attributes: ['id', 'full_name'] }]
-          }).catch(() => null);
-          if (tech) {
-            plainOrder.assignedTechnician = tech.get ? tech.get({ plain: true }) : tech;
+          const targetId = parseInt(plainOrder.assigned_technician_id);
+          if (!isNaN(targetId)) {
+            try {
+              let tech = await Technician.findOne({
+                where: { [Op.or]: [{ id: targetId }, { user_id: targetId }] },
+                include: [{ model: User, as: 'user', attributes: ['id', 'full_name'] }]
+              });
+              if (tech) {
+                plainOrder.assignedTechnician = tech.get ? tech.get({ plain: true }) : tech;
+              }
+            } catch (e) {}
           }
         }
 
