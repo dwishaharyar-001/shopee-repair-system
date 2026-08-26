@@ -9,67 +9,13 @@ const generateRepairCode = (num) => {
 // 1. Get Technician Work Queue
 const getWorkQueue = async (req, res) => {
   try {
-    const { technician_id, status } = req.query;
+    const { status } = req.query;
 
     let whereClause = {};
     if (status) {
       whereClause.status = status;
     } else {
-      // Default work queue displays active repair orders
-      whereClause.status = { [Op.in]: ['Intake', 'In Repair', 'Rework', 'QC1 Pending'] };
-    }
-
-    // Role-based flexible isolation for Technicians
-    if (req.user && req.user.role === 'Technician') {
-      let tech = await Technician.findOne({ where: { user_id: req.user.id } });
-      if (!tech) {
-        tech = await Technician.create({
-          user_id: req.user.id,
-          full_name: req.user.full_name,
-          employee_code: `TECH-${String(req.user.id).padStart(3, '0')}`,
-          is_active: true
-        }).catch(() => null);
-      }
-
-      const validTechIds = new Set([req.user.id]);
-      if (tech) validTechIds.add(tech.id);
-
-      const techsByUserId = await Technician.findAll({
-        where: { [Op.or]: [{ user_id: req.user.id }, { id: req.user.id }] }
-      });
-      techsByUserId.forEach(t => {
-        validTechIds.add(t.id);
-        if (t.user_id) validTechIds.add(t.user_id);
-      });
-
-      if (req.user.full_name) {
-        const techsByName = await Technician.findAll({
-          where: { full_name: req.user.full_name }
-        });
-        techsByName.forEach(t => {
-          validTechIds.add(t.id);
-          if (t.user_id) validTechIds.add(t.user_id);
-        });
-      }
-
-      const idArray = Array.from(validTechIds).map(id => parseInt(id)).filter(Boolean);
-      
-      let userBranchId = req.user.branch_id || (tech ? tech.branch_id : null);
-      let orConditions = [{ assigned_technician_id: { [Op.in]: idArray } }];
-
-      if (userBranchId) {
-        orConditions.push({ branch_id: userBranchId });
-      }
-
-      whereClause[Op.or] = orConditions;
-    } else if (technician_id) {
-      const techObj = await Technician.findByPk(technician_id);
-      const validTechIds = new Set([parseInt(technician_id)]);
-      if (techObj) {
-        validTechIds.add(techObj.id);
-        if (techObj.user_id) validTechIds.add(techObj.user_id);
-      }
-      whereClause.assigned_technician_id = { [Op.in]: Array.from(validTechIds) };
+      whereClause.status = { [Op.ne]: 'Released' };
     }
 
     const orders = await ServiceOrder.findAll({
@@ -108,45 +54,8 @@ const getWorkQueue = async (req, res) => {
       ]
     });
 
-    let finalOrders = orders;
-    if (finalOrders.length === 0) {
-      // Fallback: If strict role/technician/branch filtering returned 0 orders, fetch all active service orders
-      finalOrders = await ServiceOrder.findAll({
-        where: { status: { [Op.in]: ['Intake', 'In Repair', 'Rework', 'QC1 Pending'] } },
-        include: [
-          { model: Device, as: 'device' },
-          { model: Customer, as: 'customer', attributes: ['id', 'customer_code', 'name'] },
-          {
-            model: Technician,
-            as: 'assignedTechnician',
-            include: [{ model: User, as: 'user', attributes: ['id', 'full_name'] }]
-          },
-          { model: RepairLog, as: 'repairLogs' },
-          {
-            model: PartConsumed,
-            as: 'consumedParts',
-            include: [{ model: Part, as: 'part', attributes: ['id', 'part_number', 'name', 'unit_cost'] }]
-          },
-          {
-            model: BrokenPart,
-            as: 'brokenParts',
-            include: [{ model: User, as: 'reportedBy', attributes: ['id', 'full_name'] }]
-          },
-          {
-            model: QCCheckpoint,
-            as: 'qcCheckpoints',
-            include: [{ model: User, as: 'inspector', attributes: ['id', 'full_name', 'role', 'qc_affiliation'] }]
-          }
-        ],
-        order: [
-          ['updated_at', 'DESC'],
-          [{ model: RepairLog, as: 'repairLogs' }, 'id', 'DESC']
-        ]
-      });
-    }
-
     // Populate assignedTechnician if stored as user_id or missing
-    for (const order of finalOrders) {
+    for (const order of orders) {
       if (!order.assignedTechnician && order.assigned_technician_id) {
         let tech = await Technician.findOne({
           where: { [Op.or]: [{ id: order.assigned_technician_id }, { user_id: order.assigned_technician_id }] },
@@ -160,7 +69,7 @@ const getWorkQueue = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      data: finalOrders
+      data: orders
     });
   } catch (error) {
     console.error('getWorkQueue error:', error);
