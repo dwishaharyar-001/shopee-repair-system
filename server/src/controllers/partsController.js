@@ -28,6 +28,12 @@ const getInventoryParts = async (req, res) => {
       ];
     }
 
+    const defaultBranch = await Branch.findOne({ order: [['id', 'ASC']] });
+    if (defaultBranch) {
+      // Auto assign all inventory parts to default branch
+      await Part.update({ branch_id: defaultBranch.id }, { where: {} });
+    }
+
     let parts = await Part.findAll({
       where: whereClause,
       include: [{ model: Branch, as: 'branch', attributes: ['id', 'name', 'code'] }],
