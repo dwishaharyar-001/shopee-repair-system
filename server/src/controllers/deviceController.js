@@ -138,6 +138,53 @@ const getServiceOrders = async (req, res) => {
     const qcPendingCount = orders.filter(o => o.status === 'QC1 Pending' || o.status === 'QC2 Pending').length;
     const releasedCount = orders.filter(o => o.status === 'Released').length;
 
+    // Fetch all BAST documents (bast_type = '1') to compute bast_status dynamically in JS memory
+    let basts = [];
+    try {
+      const { BastDocument, BastItem } = require('../models');
+      basts = await BastDocument.findAll({
+        where: { bast_type: '1' },
+        include: [{ model: BastItem, as: 'items' }],
+        order: [['created_at', 'DESC']]
+      });
+    } catch (e) {}
+
+    const formattedOrders = orders.map(order => {
+      const plainOrder = order.get({ plain: true });
+
+      // Match order against BAST documents
+      let matchingBast = null;
+
+      // 1. Direct match by service_order_id or device_id in bast_items
+      for (const b of basts) {
+        const itemMatch = (b.items || []).find(
+          i => (i.service_order_id && String(i.service_order_id) === String(order.id)) ||
+               (i.device_id && String(i.device_id) === String(order.device_id))
+        );
+        if (itemMatch) {
+          matchingBast = b;
+          break;
+        }
+      }
+
+      // 2. Fallback match by intake_date
+      if (!matchingBast && basts.length > 0) {
+        const orderDateStr = order.intake_date 
+          ? new Date(order.intake_date).toISOString().slice(0, 10) 
+          : new Date(order.created_at).toISOString().slice(0, 10);
+        
+        matchingBast = basts.find(b => b.intake_date === orderDateStr);
+      }
+
+      if (matchingBast) {
+        plainOrder.bast_status = matchingBast.status;
+      } else if (!plainOrder.bast_status) {
+        plainOrder.bast_status = 'Pending_BAST';
+      }
+
+      return plainOrder;
+    });
+
     return res.status(200).json({
       success: true,
       stats: {
@@ -147,7 +194,7 @@ const getServiceOrders = async (req, res) => {
         qcPendingCount,
         releasedCount
       },
-      data: orders
+      data: formattedOrders
     });
   } catch (error) {
     console.error('getServiceOrders error:', error);
@@ -177,7 +224,44 @@ const getServiceOrderById = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Service Order tidak ditemukan.' });
     }
 
-    return res.status(200).json({ success: true, data: order });
+    const plainOrder = order.get({ plain: true });
+
+    try {
+      const { BastDocument, BastItem } = require('../models');
+      const basts = await BastDocument.findAll({
+        where: { bast_type: '1' },
+        include: [{ model: BastItem, as: 'items' }],
+        order: [['created_at', 'DESC']]
+      });
+
+      let matchingBast = null;
+      for (const b of basts) {
+        const itemMatch = (b.items || []).find(
+          i => (i.service_order_id && String(i.service_order_id) === String(order.id)) ||
+               (i.device_id && String(i.device_id) === String(order.device_id))
+        );
+        if (itemMatch) {
+          matchingBast = b;
+          break;
+        }
+      }
+
+      if (!matchingBast && basts.length > 0) {
+        const orderDateStr = order.intake_date 
+          ? new Date(order.intake_date).toISOString().slice(0, 10) 
+          : new Date(order.created_at).toISOString().slice(0, 10);
+        
+        matchingBast = basts.find(b => b.intake_date === orderDateStr);
+      }
+
+      if (matchingBast) {
+        plainOrder.bast_status = matchingBast.status;
+      } else if (!plainOrder.bast_status) {
+        plainOrder.bast_status = 'Pending_BAST';
+      }
+    } catch (e) {}
+
+    return res.status(200).json({ success: true, data: plainOrder });
   } catch (error) {
     return res.status(500).json({ success: false, message: 'Gagal mengambil detail service order.', error: error.message });
   }
