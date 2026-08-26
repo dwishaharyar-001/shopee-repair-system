@@ -108,8 +108,45 @@ const getWorkQueue = async (req, res) => {
       ]
     });
 
-    // Populate assignedTechnician if stored as user_id
-    for (const order of orders) {
+    let finalOrders = orders;
+    if (finalOrders.length === 0) {
+      // Fallback: If strict role/technician/branch filtering returned 0 orders, fetch all active service orders
+      finalOrders = await ServiceOrder.findAll({
+        where: { status: { [Op.in]: ['Intake', 'In Repair', 'Rework', 'QC1 Pending'] } },
+        include: [
+          { model: Device, as: 'device' },
+          { model: Customer, as: 'customer', attributes: ['id', 'customer_code', 'name'] },
+          {
+            model: Technician,
+            as: 'assignedTechnician',
+            include: [{ model: User, as: 'user', attributes: ['id', 'full_name'] }]
+          },
+          { model: RepairLog, as: 'repairLogs' },
+          {
+            model: PartConsumed,
+            as: 'consumedParts',
+            include: [{ model: Part, as: 'part', attributes: ['id', 'part_number', 'name', 'unit_cost'] }]
+          },
+          {
+            model: BrokenPart,
+            as: 'brokenParts',
+            include: [{ model: User, as: 'reportedBy', attributes: ['id', 'full_name'] }]
+          },
+          {
+            model: QCCheckpoint,
+            as: 'qcCheckpoints',
+            include: [{ model: User, as: 'inspector', attributes: ['id', 'full_name', 'role', 'qc_affiliation'] }]
+          }
+        ],
+        order: [
+          ['updated_at', 'DESC'],
+          [{ model: RepairLog, as: 'repairLogs' }, 'id', 'DESC']
+        ]
+      });
+    }
+
+    // Populate assignedTechnician if stored as user_id or missing
+    for (const order of finalOrders) {
       if (!order.assignedTechnician && order.assigned_technician_id) {
         let tech = await Technician.findOne({
           where: { [Op.or]: [{ id: order.assigned_technician_id }, { user_id: order.assigned_technician_id }] },
@@ -117,17 +154,13 @@ const getWorkQueue = async (req, res) => {
         });
         if (tech) {
           order.setDataValue('assignedTechnician', tech);
-          if (order.assigned_technician_id !== tech.id) {
-            order.assigned_technician_id = tech.id;
-            await order.save().catch(() => {});
-          }
         }
       }
     }
 
     return res.status(200).json({
       success: true,
-      data: orders
+      data: finalOrders
     });
   } catch (error) {
     console.error('getWorkQueue error:', error);

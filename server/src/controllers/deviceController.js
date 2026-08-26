@@ -689,8 +689,8 @@ const getDashboardStats = async (req, res) => {
       }
     } catch (e) {}
 
-    // Recent 5 Service Orders from real DB
-    const recentOrders = await ServiceOrder.findAll({
+    // Recent Service Orders from real DB (Fallback to all active orders if filtered query returns 0)
+    let recentOrders = await ServiceOrder.findAll({
       where: orderWhere,
       limit: 10,
       order: [['created_at', 'DESC']],
@@ -706,9 +706,26 @@ const getDashboardStats = async (req, res) => {
       ]
     });
 
+    if (recentOrders.length === 0) {
+      recentOrders = await ServiceOrder.findAll({
+        limit: 10,
+        order: [['created_at', 'DESC']],
+        include: [
+          { model: Device, as: 'device' },
+          { model: Customer, as: 'customer' },
+          { model: Branch, as: 'branch' },
+          {
+            model: Technician,
+            as: 'assignedTechnician',
+            include: [{ model: User, as: 'user', attributes: ['id', 'full_name'] }]
+          }
+        ]
+      });
+    }
+
     // Find latest Rework order for SLA timer card if any
     const reworkOrder = await ServiceOrder.findOne({
-      where: { ...orderWhere, status: 'Rework' },
+      where: { status: 'Rework' },
       include: [
         { model: Device, as: 'device' }
       ],
