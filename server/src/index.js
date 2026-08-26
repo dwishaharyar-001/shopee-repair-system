@@ -243,8 +243,19 @@ const initDatabase = async () => {
       }
     }
 
-    try { await sequelize.query("UPDATE users SET is_active = false WHERE role = 'Technician' AND (branch_id IS NULL OR branch_id = 0);"); } catch (e) {}
-    console.log('✅ Skema tabel Sequelize & PostgreSQL berhasil di-sync.');
+    try {
+      await sequelize.query(`
+        UPDATE service_orders 
+        SET bast_status = 'Approved_SEA' 
+        WHERE id IN (
+          SELECT service_order_id 
+          FROM bast_items bi 
+          JOIN bast_documents bd ON bi.bast_document_id = bd.id 
+          WHERE bd.status = 'Approved_SEA'
+        );
+      `);
+      console.log('✅ Synchronized service_orders bast_status to Approved_SEA.');
+    } catch (e) {}
 
     await ensureDefaultBranches();
     await ensureDefaultPermissions();

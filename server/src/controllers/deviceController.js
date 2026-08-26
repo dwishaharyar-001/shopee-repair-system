@@ -70,6 +70,19 @@ const getServiceOrders = async (req, res) => {
       ];
     }
 
+    try {
+      await sequelize.query(`
+        UPDATE service_orders 
+        SET bast_status = 'Approved_SEA' 
+        WHERE id IN (
+          SELECT service_order_id 
+          FROM bast_items bi 
+          JOIN bast_documents bd ON bi.bast_document_id = bd.id 
+          WHERE bd.status = 'Approved_SEA'
+        );
+      `);
+    } catch (e) {}
+
     const orders = await ServiceOrder.findAll({
       where: whereClause,
       include: [
