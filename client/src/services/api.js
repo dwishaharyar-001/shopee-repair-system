@@ -22,7 +22,7 @@ const api = axios.create({
 // Interceptor Request: Sisipkan Bearer token JWT jika ada di localStorage
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('shopee_repair_token');
+    const token = localStorage.getItem('arisa_repair_token') || localStorage.getItem('shopee_repair_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -38,6 +38,8 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response && error.response.status === 401) {
+      localStorage.removeItem('arisa_repair_token');
+      localStorage.removeItem('arisa_repair_user');
       localStorage.removeItem('shopee_repair_token');
       localStorage.removeItem('shopee_repair_user');
       if (window.location.pathname !== '/login') {

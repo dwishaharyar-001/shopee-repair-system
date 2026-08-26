@@ -1,7 +1,7 @@
 {
-  "name": "shopee-repair-backend",
+  "name": "arisa-repair-backend",
   "version": "1.0.0",
-  "description": "Shopee Asset Repair System Backend API",
+  "description": "ARISA Asset Repair System Backend API",
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",

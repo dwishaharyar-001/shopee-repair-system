@@ -5,7 +5,7 @@ const LayoutContext = createContext();
 export const LayoutProvider = ({ children }) => {
   // Desktop collapsed state (persisted in localStorage)
   const [isCollapsed, setIsCollapsed] = useState(() => {
-    const saved = localStorage.getItem('shopee_sidebar_collapsed');
+    const saved = localStorage.getItem('arisa_sidebar_collapsed') || localStorage.getItem('shopee_sidebar_collapsed');
     return saved === 'true';
   });
 
@@ -13,7 +13,7 @@ export const LayoutProvider = ({ children }) => {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
   useEffect(() => {
-    localStorage.setItem('shopee_sidebar_collapsed', isCollapsed);
+    localStorage.setItem('arisa_sidebar_collapsed', isCollapsed);
   }, [isCollapsed]);
 
   // Close mobile sidebar on window resize if switching to desktop

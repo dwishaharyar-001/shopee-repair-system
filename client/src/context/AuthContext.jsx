@@ -5,12 +5,12 @@ const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(() => {
-    const savedUser = localStorage.getItem('shopee_repair_user');
+    const savedUser = localStorage.getItem('arisa_repair_user') || localStorage.getItem('shopee_repair_user');
     return savedUser ? JSON.parse(savedUser) : null;
   });
 
   const [token, setToken] = useState(() => {
-    return localStorage.getItem('shopee_repair_token') || null;
+    return localStorage.getItem('arisa_repair_token') || localStorage.getItem('shopee_repair_token') || null;
   });
 
   const [permissions, setPermissions] = useState([]);
@@ -20,57 +20,57 @@ export const AuthProvider = ({ children }) => {
     try {
       const res = await api.get('/menu/my-permissions');
       if (res.data && res.data.success) {
-        const allowed = Array.isArray(res.data.data) ? res.data.data : (res.data.data.allowedMenus || []);
-        setPermissions(allowed);
+        setPermissions(res.data.data.menu_permissions || []);
       }
     } catch (err) {
-      console.error('Gagal mengambil permission menu:', err);
+      console.error('Failed to fetch user menu permissions:', err);
+    } finally {
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    const verifySession = async () => {
-      if (token) {
-        try {
-          const res = await api.get('/auth/me');
-          if (res.data && res.data.success) {
-            setUser(res.data.data);
-            localStorage.setItem('shopee_repair_user', JSON.stringify(res.data.data));
-            await fetchPermissions();
-          }
-        } catch (err) {
-          console.error('Verifikasi sesi gagal:', err);
-          logout();
-        }
-      }
+    if (token) {
+      fetchPermissions();
+    } else {
+      setPermissions([]);
       setLoading(false);
-    };
-
-    verifySession();
+    }
   }, [token]);
 
   const login = async (username, password) => {
     try {
-      const response = await api.post('/auth/login', { username, password });
-      if (response.data && response.data.success) {
-        const { token: newToken, user: userData } = response.data.data;
-        
-        localStorage.setItem('shopee_repair_token', newToken);
-        localStorage.setItem('shopee_repair_user', JSON.stringify(userData));
-        
+      const res = await api.post('/auth/login', { username, password });
+      if (res.data && res.data.success) {
+        const { token: newToken, user: userData } = res.data.data;
         setToken(newToken);
         setUser(userData);
-        await fetchPermissions();
-        return { success: true, message: response.data.message };
+        localStorage.setItem('arisa_repair_token', newToken);
+        localStorage.setItem('arisa_repair_user', JSON.stringify(userData));
+        return { success: true };
+      } else {
+        return { success: false, message: res.data?.message || 'Login gagal.' };
       }
-      return { success: false, message: response.data.message || 'Login gagal.' };
-    } catch (error) {
-      const msg = error.response?.data?.message || 'Gagal menghubungkan ke server autentikasi.';
-      return { success: false, message: msg };
+    } catch (err) {
+      return { 
+        success: false, 
+        message: err.response?.data?.message || 'Gagal terhubung ke server.' 
+      };
     }
   };
 
+  const updateUserData = (userData, newToken = null) => {
+    setUser(userData);
+    if (newToken) {
+      setToken(newToken);
+      localStorage.setItem('arisa_repair_token', newToken);
+    }
+    localStorage.setItem('arisa_repair_user', JSON.stringify(userData));
+  };
+
   const logout = () => {
+    localStorage.removeItem('arisa_repair_token');
+    localStorage.removeItem('arisa_repair_user');
     localStorage.removeItem('shopee_repair_token');
     localStorage.removeItem('shopee_repair_user');
     setToken(null);

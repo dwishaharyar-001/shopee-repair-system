@@ -18,15 +18,19 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           port: 22
           script: |
-            if [ ! -d "/var/www/shopee-repair-system/.git" ]; then
-              git clone https://github.com/dwishaharyar-001/shopee-repair-system.git /var/www/shopee-repair-system
+            if [ -d "/var/www/arisa-repair-system" ]; then
+              cd /var/www/arisa-repair-system
+            else
+              cd /var/www/shopee-repair-system || (mkdir -p /var/www/arisa-repair-system && cd /var/www/arisa-repair-system)
             fi
-            cd /var/www/shopee-repair-system
+            if [ ! -d ".git" ]; then
+              git clone https://github.com/dwishaharyar-001/shopee-repair-system.git .
+            fi
             git fetch origin main
             git reset --hard origin/main
             npm install
             cd server && npm install && cd ..
             cd client && npm install && npm run build && cd ..
-            pm2 startOrReload ecosystem.config.js --env production || pm2 restart shopee-repair-api || pm2 start server/src/index.js --name shopee-repair-api
+            pm2 startOrReload ecosystem.config.js --env production || pm2 restart arisa-repair-api || pm2 restart shopee-repair-api || pm2 start server/src/index.js --name arisa-repair-api
             pm2 save
             echo "✅ Auto deploy VPS sukses dijalankan!"

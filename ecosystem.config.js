@@ -1,7 +1,7 @@
 module.exports = {
   apps: [
     {
-      name: 'shopee-repair-api',
+      name: 'arisa-repair-api',
       script: 'server/src/index.js',
       instances: 1,
       autorestart: true,
