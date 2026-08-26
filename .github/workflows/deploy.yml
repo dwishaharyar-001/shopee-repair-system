@@ -18,6 +18,9 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           port: 22
           script: |
+            if [ ! -d "/var/www/shopee-repair-system/.git" ]; then
+              git clone https://github.com/dwishaharyar-001/shopee-repair-system.git /var/www/shopee-repair-system
+            fi
             cd /var/www/shopee-repair-system
             git fetch origin main
             git reset --hard origin/main
