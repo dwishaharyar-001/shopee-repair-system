@@ -31,17 +31,29 @@ const getWorkQueue = async (req, res) => {
         }).catch(() => null);
       }
 
-      const techs = await Technician.findAll({
-        where: { [Op.or]: [{ user_id: req.user.id }, { id: req.user.id }] }
-      });
       const validTechIds = new Set([req.user.id]);
       if (tech) validTechIds.add(tech.id);
-      techs.forEach(t => {
+
+      const techsByUserId = await Technician.findAll({
+        where: { [Op.or]: [{ user_id: req.user.id }, { id: req.user.id }] }
+      });
+      techsByUserId.forEach(t => {
         validTechIds.add(t.id);
         if (t.user_id) validTechIds.add(t.user_id);
       });
 
-      whereClause.assigned_technician_id = { [Op.in]: Array.from(validTechIds) };
+      if (req.user.full_name) {
+        const techsByName = await Technician.findAll({
+          where: { full_name: req.user.full_name }
+        });
+        techsByName.forEach(t => {
+          validTechIds.add(t.id);
+          if (t.user_id) validTechIds.add(t.user_id);
+        });
+      }
+
+      const idArray = Array.from(validTechIds).map(id => parseInt(id)).filter(Boolean);
+      whereClause.assigned_technician_id = { [Op.in]: idArray };
     } else if (technician_id) {
       const techObj = await Technician.findByPk(technician_id);
       const validTechIds = new Set([parseInt(technician_id)]);
