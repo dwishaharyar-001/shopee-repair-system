@@ -106,6 +106,8 @@ const Devices = () => {
     switch (status) {
       case 'Intake':
         return 'bg-amber-100 text-amber-800 border-amber-300';
+      case 'Teknisi Assigned':
+        return 'bg-indigo-100 text-indigo-800 border-indigo-300';
       case 'In Repair':
         return 'bg-blue-100 text-blue-800 border-blue-300';
       case 'QC1 Pending':
@@ -384,8 +386,14 @@ const Devices = () => {
                         {row.assignedTechnician?.user?.full_name || '-'}
                       </td>
                       <td className="py-3.5 px-4">
-                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border ${getStatusBadgeClass(row.status)}`}>
-                          {row.status}
+                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border ${getStatusBadgeClass(
+                          (row.status === 'Intake' || !row.status) && (row.assigned_technician_id || row.assignedTechnician)
+                            ? 'Teknisi Assigned'
+                            : row.status
+                        )}`}>
+                          {(row.status === 'Intake' || !row.status) && (row.assigned_technician_id || row.assignedTechnician)
+                            ? 'Teknisi Assigned'
+                            : row.status}
                         </span>
                       </td>
                       <td className="py-3.5 px-4">

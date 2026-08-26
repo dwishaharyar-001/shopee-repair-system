@@ -50,6 +50,8 @@ const Dashboard = () => {
 
   const getStatusBadge = (status) => {
     switch (status) {
+      case 'Teknisi Assigned':
+        return 'bg-indigo-100 text-indigo-700 border-indigo-200';
       case 'In Repair':
         return 'bg-blue-100 text-blue-700 border-blue-200';
       case 'QC1 Pending':

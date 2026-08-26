@@ -196,6 +196,7 @@ const EditDeviceModal = ({ isOpen, onClose, order, onSuccess }) => {
                 className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-amber-500 focus:outline-none"
               >
                 <option value="Intake">Intake (Pendaftaran Baru)</option>
+                <option value="Teknisi Assigned">Teknisi Assigned (Telah Ditugaskan)</option>
                 <option value="In Repair">In Repair (Dalam Pengerjaan)</option>
                 <option value="QC1 Pending">QC1 Pending (Audit Arisa)</option>
                 <option value="Rework">Rework (Perbaikan Ulang 48h)</option>
