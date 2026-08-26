@@ -20,17 +20,17 @@ router.get('/', getBranches);
 
 // Branch repair category prices
 router.get('/repair-prices', getBranchCategoryPrices);
-router.put('/:branchId/repair-prices', requireRole('Admin'), updateBranchCategoryPrices);
+router.put('/:branchId/repair-prices', requireRole('Admin', 'Coordinator'), updateBranchCategoryPrices);
 
 // Admin Master list
 router.get('/admin', requireRole('Admin', 'Coordinator'), getAllBranches);
 
-// Admin CRUD operations
-router.post('/', requireRole('Admin'), createBranch);
-router.put('/:id', requireRole('Admin'), updateBranch);
-router.delete('/:id', requireRole('Admin'), deleteBranch);
+// Admin / Coordinator CRUD operations
+router.post('/', requireRole('Admin', 'Coordinator'), createBranch);
+router.put('/:id', requireRole('Admin', 'Coordinator'), updateBranch);
+router.delete('/:id', requireRole('Admin', 'Coordinator'), deleteBranch);
 
-// Admin Diagnostic Fee adjustment per branch (STRICT ADMIN ONLY)
-router.put('/:id/diagnostic-fee', requireRole('Admin'), updateBranchDiagnosticFee);
+// Diagnostic Fee adjustment per branch (Admin & Coordinator)
+router.put('/:id/diagnostic-fee', requireRole('Admin', 'Coordinator'), updateBranchDiagnosticFee);
 
 module.exports = router;
