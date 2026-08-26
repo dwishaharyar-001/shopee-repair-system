@@ -479,7 +479,7 @@ const BASTDocuments = () => {
                   className="w-full bg-white border border-blue-300 rounded-lg px-2.5 py-1.5 text-xs font-bold text-slate-800"
                 >
                   <option value="">-- Pilih PIC First Party --</option>
-                  {(bastType === '1' ? picShopeeUsers : picArisaUsers).map(u => (
+                  {(bastType === '1' ? picClientUsers : picArisaUsers).map(u => (
                     <option key={u.id} value={u.id}>
                       👤 {u.full_name} ({u.role}{u.qc_affiliation ? ` - ${u.qc_affiliation}` : ''})
                     </option>
@@ -502,7 +502,7 @@ const BASTDocuments = () => {
           {/* SECOND PARTY */}
           <div className="p-3.5 bg-orange-50/50 rounded-xl border border-orange-200/80 space-y-2">
             <span className="font-bold text-orange-950 uppercase tracking-wider text-[11px] block">
-              SECOND PARTY (Receiving) — {bastType === '1' ? 'PIC Arisa Computer' : 'PIC Shopee'}
+              SECOND PARTY (Receiving) — {bastType === '1' ? 'PIC Arisa Computer' : 'PIC Client'}
             </span>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <div>
@@ -513,7 +513,7 @@ const BASTDocuments = () => {
                   className="w-full bg-white border border-orange-300 rounded-lg px-2.5 py-1.5 text-xs font-bold text-slate-800"
                 >
                   <option value="">-- Pilih PIC Second Party --</option>
-                  {(bastType === '1' ? picArisaUsers : picShopeeUsers).map(u => (
+                  {(bastType === '1' ? picArisaUsers : picClientUsers).map(u => (
                     <option key={u.id} value={u.id}>
                       👤 {u.full_name} ({u.role}{u.qc_affiliation ? ` - ${u.qc_affiliation}` : ''})
                     </option>
