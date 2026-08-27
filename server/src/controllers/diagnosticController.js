@@ -236,12 +236,23 @@ const processSeaDiagnosticApproval = async (req, res) => {
       });
     }
 
-    const order = await ServiceOrder.findByPk(id, {
-      include: [{ model: DiagnosticPlanItem, as: 'diagnosticPlanItems' }]
-    });
+    const parsedId = parseInt(id);
+    let order = null;
+    if (!isNaN(parsedId)) {
+      order = await ServiceOrder.findByPk(parsedId, {
+        include: [{ model: DiagnosticPlanItem, as: 'diagnosticPlanItems' }]
+      }).catch(() => null);
+    }
 
     if (!order) {
-      return res.status(404).json({ success: false, message: 'Service Order tidak ditemukan.' });
+      order = await ServiceOrder.findOne({
+        where: { [Op.or]: [{ service_id: id }, { id: isNaN(parsedId) ? 0 : parsedId }] },
+        include: [{ model: DiagnosticPlanItem, as: 'diagnosticPlanItems' }]
+      }).catch(() => null);
+    }
+
+    if (!order) {
+      return res.status(404).json({ success: false, message: `Service Order '${id}' tidak ditemukan.` });
     }
 
     const reviewerId = req.user ? req.user.id : null;
@@ -321,8 +332,8 @@ const processSeaDiagnosticApproval = async (req, res) => {
     // Directly update status in DB via raw query as a bulletproof fallback
     try {
       await sequelize.query(
-        "UPDATE service_orders SET status = :status, sea_approval_decision = :decision, budget_approved_at = NOW() WHERE id = :id",
-        { replacements: { status: order.status, decision: overall_decision, id: order.id } }
+        "UPDATE service_orders SET status = :status, sea_approval_decision = :decision, budget_approved_at = NOW() WHERE id = :id OR service_id = :serviceId",
+        { replacements: { status: order.status, decision: overall_decision, id: order.id, serviceId: order.service_id || String(id) } }
       );
     } catch (e) {}
 
