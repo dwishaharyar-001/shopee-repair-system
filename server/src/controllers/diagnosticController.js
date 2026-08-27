@@ -219,6 +219,15 @@ const processSeaDiagnosticApproval = async (req, res) => {
       notes 
     } = req.body;
 
+    // Auto-create missing approval columns in PostgreSQL if they don't exist
+    try { await sequelize.query("ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'Intake';"); } catch (e) {}
+    try { await sequelize.query("ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS sea_approval_decision VARCHAR(50);"); } catch (e) {}
+    try { await sequelize.query("ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS budget_approved_at TIMESTAMP WITH TIME ZONE;"); } catch (e) {}
+    try { await sequelize.query("ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS budget_approved_by_user_id INTEGER;"); } catch (e) {}
+    try { await sequelize.query("ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS estimated_part_cost NUMERIC(12,2) DEFAULT 0;"); } catch (e) {}
+    try { await sequelize.query("ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS estimated_service_cost NUMERIC(12,2) DEFAULT 0;"); } catch (e) {}
+    try { await sequelize.query("ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS total_estimated_cost NUMERIC(12,2) DEFAULT 0;"); } catch (e) {}
+
     if (!overall_decision || !['Full_Approve', 'Partial_Approve', 'Not_Approve_Harvest', 'Revision_Requested'].includes(overall_decision)) {
       return res.status(400).json({
         success: false,
