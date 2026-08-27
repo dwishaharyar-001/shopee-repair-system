@@ -1106,23 +1106,56 @@ const Repairs = () => {
                         <span>Selesai Perbaikan & Submit ke QC1 Arisa</span>
                       </button>
                     ) : (
-                      <button
-                        type="button"
-                        disabled={item.status === 'Diagnostic_Pending_Approval' || item.status === 'Harvested' || submittingDiagnostic[item.id]}
-                        onClick={() => handleSubmitDiagnosticPlan(item.id)}
-                        className="w-full sm:w-auto px-5 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white text-xs font-bold rounded-xl shadow-md shadow-purple-600/20 transition-all flex items-center justify-center space-x-2 disabled:opacity-40 disabled:cursor-not-allowed active:scale-95"
-                      >
-                        <Send className="w-4 h-4" />
-                        <span>
-                          {submittingDiagnostic[item.id]
-                            ? 'Mengirim Proposal...'
-                            : item.status === 'Diagnostic_Pending_Approval'
-                            ? 'Menunggu Approval QC SEA'
-                            : item.status === 'Harvested'
-                            ? 'Kanibalisasi (Terkunci)'
-                            : 'Kirim Rencana Perbaikan & Budget ke QC SEA'}
-                        </span>
-                      </button>
+                      (() => {
+                        const outcome = (diagnosticsOutcome[item.id] || item.notes || '').trim();
+                        const action = (actionNotes[item.id] || item.action_taken || '').trim();
+                        const cats = selectedCategories[item.id] || [];
+                        const isReady = outcome.length > 0 && action.length > 0 && cats.length > 0;
+
+                        const isPending = item.status === 'Diagnostic_Pending_Approval';
+                        const isHarvested = item.status === 'Harvested';
+                        const isSubmitting = submittingDiagnostic[item.id];
+                        const isDisabled = isPending || isHarvested || isSubmitting || !isReady;
+
+                        return (
+                          <div className="flex flex-col items-end space-y-1 w-full sm:w-auto">
+                            <button
+                              type="button"
+                              disabled={isDisabled}
+                              onClick={() => {
+                                if (!isReady) {
+                                  showToast('⚠️ Harap isi Outcome Diagnostik, Catatan Tindakan Perbaikan, dan pilih minimal 1 Kategori Perbaikan.');
+                                  return;
+                                }
+                                handleSubmitDiagnosticPlan(item.id);
+                              }}
+                              className={`w-full sm:w-auto px-5 py-3 text-white text-xs font-bold rounded-xl shadow-md transition-all flex items-center justify-center space-x-2 disabled:opacity-40 disabled:cursor-not-allowed active:scale-95 ${
+                                !isReady && !isPending && !isHarvested
+                                  ? 'bg-slate-400 cursor-not-allowed'
+                                  : 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 shadow-purple-600/20'
+                              }`}
+                            >
+                              <Send className="w-4 h-4" />
+                              <span>
+                                {isSubmitting
+                                  ? 'Mengirim Proposal...'
+                                  : isPending
+                                  ? 'Menunggu Approval QC SEA'
+                                  : isHarvested
+                                  ? 'Kanibalisasi (Terkunci)'
+                                  : !isReady
+                                  ? 'Lengkapi Diagnostik & Kategori Dahulu'
+                                  : 'Kirim Rencana Perbaikan & Budget ke QC SEA'}
+                              </span>
+                            </button>
+                            {!isReady && !isPending && !isHarvested && (
+                              <span className="text-[10px] text-amber-700 font-semibold italic">
+                                🔒 Wajib isi: Outcome Diagnostik, Tindakan Perbaikan & Minimal 1 Kategori Perbaikan
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })()
                     )}
                   </div>
                 </div>
