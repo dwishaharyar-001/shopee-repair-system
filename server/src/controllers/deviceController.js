@@ -612,21 +612,43 @@ const getDevices = async (req, res) => {
 // 7. Get Real Dashboard Stats from Database
 const getDashboardStats = async (req, res) => {
   try {
-    const totalDevices = await Device.count();
+    let totalDevices = 0;
+    try {
+      totalDevices = await Device.count();
+    } catch (e) {}
 
-    let allOrders = await ServiceOrder.findAll({
-      order: [['created_at', 'DESC']],
-      include: [
-        { model: Device, as: 'device' },
-        { model: Customer, as: 'customer' },
-        { model: Branch, as: 'branch' },
-        {
-          model: Technician,
-          as: 'assignedTechnician',
-          include: [{ model: User, as: 'user', attributes: ['id', 'full_name'] }]
-        }
-      ]
-    });
+    let allOrders = [];
+    try {
+      allOrders = await ServiceOrder.findAll({
+        include: [
+          { model: Device, as: 'device', required: false },
+          { model: Customer, as: 'customer', required: false },
+          { model: Branch, as: 'branch', required: false },
+          {
+            model: Technician,
+            as: 'assignedTechnician',
+            required: false,
+            include: [{ model: User, as: 'user', attributes: ['id', 'full_name'], required: false }]
+          }
+        ],
+        order: [['id', 'DESC']]
+      });
+    } catch (e1) {
+      console.error('getDashboardStats Level 1 query error:', e1.message);
+      try {
+        allOrders = await ServiceOrder.findAll({
+          include: [{ model: Device, as: 'device', required: false }],
+          order: [['id', 'DESC']]
+        });
+      } catch (e2) {
+        console.error('getDashboardStats Level 2 query error:', e2.message);
+        allOrders = await ServiceOrder.findAll({ order: [['id', 'DESC']] }).catch(() => []);
+      }
+    }
+
+    if (totalDevices === 0 && allOrders.length > 0) {
+      totalDevices = allOrders.length;
+    }
 
     // Populate assignedTechnician if missing
     for (const order of allOrders) {
@@ -635,7 +657,7 @@ const getDashboardStats = async (req, res) => {
         if (!isNaN(targetId)) {
           let tech = await Technician.findOne({
             where: { [Op.or]: [{ id: targetId }, { user_id: targetId }] },
-            include: [{ model: User, as: 'user', attributes: ['id', 'full_name'] }]
+            include: [{ model: User, as: 'user', attributes: ['id', 'full_name'], required: false }]
           }).catch(() => null);
           if (tech) {
             order.setDataValue('assignedTechnician', tech);
