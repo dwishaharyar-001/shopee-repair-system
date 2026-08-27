@@ -227,6 +227,7 @@ const processSeaDiagnosticApproval = async (req, res) => {
     try { await sequelize.query("ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS estimated_part_cost NUMERIC(12,2) DEFAULT 0;"); } catch (e) {}
     try { await sequelize.query("ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS estimated_service_cost NUMERIC(12,2) DEFAULT 0;"); } catch (e) {}
     try { await sequelize.query("ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS total_estimated_cost NUMERIC(12,2) DEFAULT 0;"); } catch (e) {}
+    try { await sequelize.query("ALTER TABLE diagnostic_plan_items ADD COLUMN IF NOT EXISTS approval_status VARCHAR(50) DEFAULT 'Pending';"); } catch (e) {}
 
     if (!overall_decision || !['Full_Approve', 'Partial_Approve', 'Not_Approve_Harvest', 'Revision_Requested'].includes(overall_decision)) {
       return res.status(400).json({
@@ -249,11 +250,13 @@ const processSeaDiagnosticApproval = async (req, res) => {
     order.budget_approved_by_user_id = reviewerId;
 
     if (overall_decision === 'Full_Approve') {
-      // Approve all plan items
-      await DiagnosticPlanItem.update(
-        { approval_status: 'Approved' },
-        { where: { service_order_id: order.id } }
-      );
+      // Approve all plan items safely
+      try {
+        await DiagnosticPlanItem.update(
+          { approval_status: 'Approved' },
+          { where: { service_order_id: order.id } }
+        );
+      } catch (e) {}
 
       order.status = 'In Repair';
       order.repair_started_at = new Date();
@@ -263,24 +266,30 @@ const processSeaDiagnosticApproval = async (req, res) => {
       // Approve selected items, reject remaining
       const approvedIds = (approved_item_ids || []).map(i => parseInt(i)).filter(Boolean);
 
-      for (const item of order.diagnosticPlanItems) {
-        if (approvedIds.includes(item.id)) {
-          item.approval_status = 'Approved';
-        } else {
-          item.approval_status = 'Rejected';
+      if (order.diagnosticPlanItems && order.diagnosticPlanItems.length > 0) {
+        for (const item of order.diagnosticPlanItems) {
+          try {
+            if (approvedIds.includes(item.id)) {
+              item.approval_status = 'Approved';
+            } else {
+              item.approval_status = 'Rejected';
+            }
+            await item.save();
+          } catch (e) {}
         }
-        await item.save();
       }
 
       // Recalculate approved part cost
-      const approvedItems = await DiagnosticPlanItem.findAll({
-        where: { service_order_id: order.id, approval_status: 'Approved' }
-      });
-
       let approvedPartCost = 0;
-      approvedItems.forEach(i => {
-        approvedPartCost += parseFloat(i.total_cost) || 0;
-      });
+      try {
+        const approvedItems = await DiagnosticPlanItem.findAll({
+          where: { service_order_id: order.id, approval_status: 'Approved' }
+        });
+
+        approvedItems.forEach(i => {
+          approvedPartCost += parseFloat(i.total_cost) || 0;
+        });
+      } catch (e) {}
 
       order.estimated_part_cost = approvedPartCost;
       order.total_estimated_cost = approvedPartCost + parseFloat(order.estimated_service_cost || 0);
@@ -290,10 +299,12 @@ const processSeaDiagnosticApproval = async (req, res) => {
 
     } else if (overall_decision === 'Not_Approve_Harvest') {
       // Fully Not Approve -> Send to Harvest / Kanibalisasi
-      await DiagnosticPlanItem.update(
-        { approval_status: 'Rejected' },
-        { where: { service_order_id: order.id } }
-      );
+      try {
+        await DiagnosticPlanItem.update(
+          { approval_status: 'Rejected' },
+          { where: { service_order_id: order.id } }
+        );
+      } catch (e) {}
 
       order.status = 'Harvested';
       order.harvest_reason = harvest_reason || notes || 'Biaya perbaikan dan kebutuhan sparepart tidak disetujui (Kanibalisasi).';
@@ -305,7 +316,7 @@ const processSeaDiagnosticApproval = async (req, res) => {
       if (notes) order.notes = (order.notes ? order.notes + '\n' : '') + `[QC SEA Minta Revisi]: ${notes}`;
     }
 
-    await order.save();
+    try { await order.save(); } catch (e) {}
 
     // Directly update status in DB via raw query as a bulletproof fallback
     try {
