@@ -52,15 +52,15 @@ const getServiceOrders = async (req, res) => {
     const { status, asset_type, search, customer_id, branch_id } = req.query;
 
     let whereClause = {};
-    if (status) whereClause.status = status;
-    if (customer_id) whereClause.customer_id = customer_id;
-    if (branch_id) whereClause.branch_id = branch_id;
+    if (status && status !== 'all' && status !== 'null') whereClause.status = status;
+    if (customer_id && customer_id !== 'all' && customer_id !== 'null') whereClause.customer_id = customer_id;
+    if (branch_id && branch_id !== 'all' && branch_id !== 'null') whereClause.branch_id = branch_id;
 
     let deviceWhere = {};
-    if (asset_type) deviceWhere.asset_type = asset_type;
+    if (asset_type && asset_type !== 'all' && asset_type !== 'null') deviceWhere.asset_type = asset_type;
 
-    if (search) {
-      const searchTerms = { [Op.like]: `%${search}%` };
+    if (search && String(search).trim() !== '') {
+      const searchTerms = { [Op.like]: `%${String(search).trim()}%` };
       whereClause[Op.or] = [
         { service_id: searchTerms },
         { '$device.serial_number$': searchTerms },
@@ -111,27 +111,42 @@ const getServiceOrders = async (req, res) => {
       console.warn('BAST status sync warning:', e.message);
     }
 
-    const orders = await ServiceOrder.findAll({
-      where: whereClause,
-      include: [
-        {
-          model: Device,
-          as: 'device',
-          required: false,
-          where: Object.keys(deviceWhere).length > 0 ? deviceWhere : undefined
-        },
-        { model: Customer, as: 'customer', attributes: ['id', 'customer_code', 'name'], required: false },
-        { model: Branch, as: 'branch', attributes: ['id', 'name', 'code', 'address'], required: false },
-        {
-          model: Technician,
-          as: 'assignedTechnician',
-          required: false,
-          include: [{ model: User, as: 'user', attributes: ['id', 'full_name'], required: false }]
-        },
-        { model: User, as: 'receivedBy', attributes: ['id', 'full_name'], required: false }
-      ],
-      order: [['created_at', 'DESC']]
-    });
+    let orders = [];
+    try {
+      orders = await ServiceOrder.findAll({
+        where: whereClause,
+        include: [
+          {
+            model: Device,
+            as: 'device',
+            required: false,
+            where: Object.keys(deviceWhere).length > 0 ? deviceWhere : undefined
+          },
+          { model: Customer, as: 'customer', attributes: ['id', 'customer_code', 'name'], required: false },
+          { model: Branch, as: 'branch', attributes: ['id', 'name', 'code', 'address'], required: false },
+          {
+            model: Technician,
+            as: 'assignedTechnician',
+            required: false,
+            include: [{ model: User, as: 'user', attributes: ['id', 'full_name'], required: false }]
+          },
+          { model: User, as: 'receivedBy', attributes: ['id', 'full_name'], required: false }
+        ],
+        order: [['created_at', 'DESC']]
+      });
+    } catch (dbErr) {
+      console.error('ServiceOrder.findAll primary query error in getServiceOrders:', dbErr.message);
+      try {
+        orders = await ServiceOrder.findAll({
+          where: whereClause,
+          include: [{ model: Device, as: 'device', required: false }],
+          order: [['created_at', 'DESC']]
+        });
+      } catch (dbErr2) {
+        console.error('ServiceOrder.findAll fallback query error:', dbErr2.message);
+        orders = await ServiceOrder.findAll({ order: [['created_at', 'DESC']] }).catch(() => []);
+      }
+    }
 
     // Calculate Summary Stats
     const totalCount = orders.length;
