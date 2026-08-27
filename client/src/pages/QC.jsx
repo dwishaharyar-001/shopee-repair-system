@@ -374,16 +374,51 @@ const QC = () => {
                         Rp {parseFloat(order.total_estimated_cost || 0).toLocaleString('id-ID')}
                       </td>
                       <td className="py-3.5 px-4 text-center">
-                        <button
-                          onClick={() => {
-                            setSelectedBudgetOrder(order);
-                            setIsSeaBudgetModalOpen(true);
-                          }}
-                          className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-emerald-600/20 flex items-center space-x-1.5 mx-auto"
-                        >
-                          <Calculator className="w-4 h-4" />
-                          <span>Review Budget & Approval</span>
-                        </button>
+                        {order.sea_approval_decision === 'Full_Approve' || order.sea_approval_decision === 'Partial_Approve' || order.status === 'In Repair' ? (
+                          <button
+                            onClick={() => {
+                              setSelectedBudgetOrder(order);
+                              setIsSeaBudgetModalOpen(true);
+                            }}
+                            className="px-3.5 py-1.5 bg-emerald-100 text-emerald-800 border border-emerald-300 hover:bg-emerald-200 rounded-xl text-xs font-bold transition-all shadow-xs flex items-center space-x-1.5 mx-auto"
+                          >
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>Approved Budget</span>
+                          </button>
+                        ) : order.sea_approval_decision === 'Revision_Requested' || order.status === 'Diagnostic_Revision' ? (
+                          <button
+                            onClick={() => {
+                              setSelectedBudgetOrder(order);
+                              setIsSeaBudgetModalOpen(true);
+                            }}
+                            className="px-3.5 py-1.5 bg-purple-100 text-purple-800 border border-purple-300 hover:bg-purple-200 rounded-xl text-xs font-bold transition-all shadow-xs flex items-center space-x-1.5 mx-auto"
+                          >
+                            <RefreshCw className="w-3.5 h-3.5 text-purple-600" />
+                            <span>Minta Revisi</span>
+                          </button>
+                        ) : order.sea_approval_decision === 'Not_Approve_Harvest' || order.status === 'Harvested' ? (
+                          <button
+                            onClick={() => {
+                              setSelectedBudgetOrder(order);
+                              setIsSeaBudgetModalOpen(true);
+                            }}
+                            className="px-3.5 py-1.5 bg-rose-100 text-rose-800 border border-rose-300 hover:bg-rose-200 rounded-xl text-xs font-bold transition-all shadow-xs flex items-center space-x-1.5 mx-auto"
+                          >
+                            <AlertTriangle className="w-3.5 h-3.5 text-rose-600" />
+                            <span>Ditolak / Harvested</span>
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => {
+                              setSelectedBudgetOrder(order);
+                              setIsSeaBudgetModalOpen(true);
+                            }}
+                            className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-emerald-600/20 flex items-center space-x-1.5 mx-auto"
+                          >
+                            <Calculator className="w-4 h-4" />
+                            <span>Review Budget & Approval</span>
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))}

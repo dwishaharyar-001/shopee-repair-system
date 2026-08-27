@@ -135,6 +135,13 @@ const SEABudgetApprovalModal = ({ isOpen, onClose, order, onSuccess }) => {
 
         {/* Modal Body */}
         <div className="p-6 space-y-6 overflow-y-auto flex-1 text-xs">
+          {(order.sea_approval_decision === 'Full_Approve' || order.sea_approval_decision === 'Partial_Approve' || order.status === 'In Repair') && (
+            <div className="p-3.5 bg-emerald-50 border border-emerald-300 rounded-xl text-emerald-900 font-bold flex items-center space-x-2">
+              <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0" />
+              <span>Rencana Anggaran Biaya (RAB) ini telah disetujui (Approved Budget). Unit saat ini berada dalam tahap pengerjaan fisik oleh Teknisi.</span>
+            </div>
+          )}
+
           {error && (
             <div className="p-3.5 bg-red-50 border border-red-200 rounded-xl text-red-700 font-semibold flex items-center space-x-2">
               <AlertTriangle className="w-4 h-4 flex-shrink-0" />

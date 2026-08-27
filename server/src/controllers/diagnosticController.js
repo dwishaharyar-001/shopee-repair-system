@@ -298,6 +298,14 @@ const processSeaDiagnosticApproval = async (req, res) => {
 
     await order.save();
 
+    // Directly update status in DB via raw query as a bulletproof fallback
+    try {
+      await sequelize.query(
+        "UPDATE service_orders SET status = :status, sea_approval_decision = :decision, budget_approved_at = NOW() WHERE id = :id",
+        { replacements: { status: order.status, decision: overall_decision, id: order.id } }
+      );
+    } catch (e) {}
+
     const updatedDoc = await ServiceOrder.findByPk(order.id, {
       include: [
         { model: Device, as: 'device' },
