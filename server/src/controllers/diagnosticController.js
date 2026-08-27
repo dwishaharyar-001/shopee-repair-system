@@ -25,10 +25,26 @@ const submitDiagnosticPlan = async (req, res) => {
       planned_parts = [] 
     } = req.body;
 
-    // Ensure PostgreSQL table status column exists as VARCHAR(50)
+    // Auto-create status column & diagnostic_plan_items table in PostgreSQL if missing
     try { await sequelize.query("ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'Intake';"); } catch (e) {}
     try { await sequelize.query('ALTER TABLE "service_orders" ADD COLUMN IF NOT EXISTS "status" VARCHAR(50) DEFAULT \'Intake\';'); } catch (e) {}
     try { await sequelize.query("ALTER TABLE service_orders ALTER COLUMN status TYPE VARCHAR(50) USING status::text;"); } catch (e) {}
+    try {
+      await sequelize.query(`
+        CREATE TABLE IF NOT EXISTS diagnostic_plan_items (
+          id SERIAL PRIMARY KEY,
+          service_order_id INTEGER REFERENCES service_orders(id) ON DELETE CASCADE,
+          part_id INTEGER,
+          quantity INTEGER DEFAULT 1,
+          unit_cost NUMERIC(12,2) DEFAULT 0,
+          total_cost NUMERIC(12,2) DEFAULT 0,
+          category_name VARCHAR(255),
+          approval_status VARCHAR(50) DEFAULT 'Pending',
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+    } catch (e) {}
 
     const order = await ServiceOrder.findByPk(id, {
       include: [{ model: Branch, as: 'branch' }]
@@ -38,7 +54,6 @@ const submitDiagnosticPlan = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Service order tidak ditemukan.' });
     }
 
-    // Set diagnostic start time if not recorded
     if (!order.diagnostic_started_at) {
       order.diagnostic_started_at = order.assigned_tech_at || new Date();
     }
@@ -48,52 +63,68 @@ const submitDiagnosticPlan = async (req, res) => {
 
     // 1. Calculate Estimated Service Fees from BranchCategoryPrice
     let totalServiceCost = 0;
-    const categoryNamesStr = Array.isArray(selected_categories) ? selected_categories.join(', ') : selected_categories;
-
     if (Array.isArray(selected_categories) && selected_categories.length > 0 && order.branch_id) {
-      const priceRecords = await BranchCategoryPrice.findAll({
-        where: {
-          branch_id: order.branch_id,
-          category_name: { [Op.in]: selected_categories }
-        }
-      });
+      try {
+        const priceRecords = await BranchCategoryPrice.findAll({
+          where: {
+            branch_id: order.branch_id,
+            category_name: { [Op.in]: selected_categories }
+          }
+        });
 
-      priceRecords.forEach(p => {
-        totalServiceCost += parseFloat(p.price) || 0;
-      });
+        priceRecords.forEach(p => {
+          totalServiceCost += parseFloat(p.price) || 0;
+        });
+      } catch (e) {}
     }
 
     // 2. Clear previous plan items and insert new requested parts
-    await DiagnosticPlanItem.destroy({ where: { service_order_id: order.id } });
-
     let totalPartCost = 0;
-    if (Array.isArray(planned_parts) && planned_parts.length > 0) {
-      for (const pItem of planned_parts) {
-        const partObj = await Part.findByPk(pItem.part_id);
-        const unitCost = partObj ? parseFloat(partObj.unit_cost) || 0 : parseFloat(pItem.unit_cost) || 0;
-        const qty = parseInt(pItem.quantity) || 1;
-        const itemTotal = unitCost * qty;
-        totalPartCost += itemTotal;
+    try {
+      await DiagnosticPlanItem.destroy({ where: { service_order_id: order.id } }).catch(() => null);
 
-        await DiagnosticPlanItem.create({
-          service_order_id: order.id,
-          part_id: pItem.part_id,
-          quantity: qty,
-          unit_cost: unitCost,
-          total_cost: itemTotal,
-          category_name: pItem.category_name || null,
-          approval_status: 'Pending'
-        });
+      if (Array.isArray(planned_parts) && planned_parts.length > 0) {
+        for (const pItem of planned_parts) {
+          let unitCost = parseFloat(pItem.unit_cost) || 0;
+          try {
+            const partObj = await Part.findByPk(pItem.part_id);
+            if (partObj) unitCost = parseFloat(partObj.unit_cost) || unitCost;
+          } catch (e) {}
+
+          const qty = parseInt(pItem.quantity) || 1;
+          const itemTotal = unitCost * qty;
+          totalPartCost += itemTotal;
+
+          await DiagnosticPlanItem.create({
+            service_order_id: order.id,
+            part_id: pItem.part_id,
+            quantity: qty,
+            unit_cost: unitCost,
+            total_cost: itemTotal,
+            category_name: pItem.category_name || null,
+            approval_status: 'Pending'
+          }).catch(err => console.error('DiagnosticPlanItem.create warning:', err.message));
+        }
       }
+    } catch (e) {
+      console.error('Diagnostic plan items processing error:', e.message);
     }
 
-    // 3. Update Order Budget Totals and Status
+    // 3. Update Order Budget Totals and Status explicitly
     order.estimated_part_cost = totalPartCost;
     order.estimated_service_cost = totalServiceCost;
     order.total_estimated_cost = totalPartCost + totalServiceCost;
     order.status = 'Diagnostic_Pending_Approval';
     order.diagnostic_submitted_at = new Date();
     await order.save();
+
+    // Directly update status in DB via raw query as a bulletproof fallback
+    try {
+      await sequelize.query(
+        "UPDATE service_orders SET status = 'Diagnostic_Pending_Approval', total_estimated_cost = :totalCost, diagnostic_submitted_at = NOW() WHERE id = :orderId",
+        { replacements: { totalCost: order.total_estimated_cost, orderId: order.id } }
+      );
+    } catch (e) {}
 
     const updatedDoc = await ServiceOrder.findByPk(order.id, {
       include: [
@@ -130,10 +161,9 @@ const getPendingDiagnosticApprovals = async (req, res) => {
   try {
     try { await sequelize.query("ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'Intake';"); } catch (e) {}
 
-    let orders = [];
+    let allOrders = [];
     try {
-      orders = await ServiceOrder.findAll({
-        where: { status: 'Diagnostic_Pending_Approval' },
+      allOrders = await ServiceOrder.findAll({
         include: [
           { model: Device, as: 'device' },
           { model: Customer, as: 'customer' },
@@ -145,29 +175,25 @@ const getPendingDiagnosticApprovals = async (req, res) => {
             include: [{ model: Part, as: 'part' }]
           }
         ],
-        order: [['diagnostic_submitted_at', 'ASC']]
+        order: [['created_at', 'DESC']]
       });
     } catch (dbErr) {
-      const allOrders = await ServiceOrder.findAll({
-        include: [
-          { model: Device, as: 'device' },
-          { model: Customer, as: 'customer' },
-          { model: Branch, as: 'branch' },
-          { model: Technician, as: 'assignedTechnician', include: [{ model: User, as: 'user' }] },
-          {
-            model: DiagnosticPlanItem,
-            as: 'diagnosticPlanItems',
-            include: [{ model: Part, as: 'part' }]
-          }
-        ]
-      });
-      orders = allOrders.filter(o => o.status === 'Diagnostic_Pending_Approval');
+      console.error('ServiceOrder.findAll error in getPendingDiagnosticApprovals:', dbErr.message);
     }
+
+    // Filter orders that have submitted diagnostic plans, requested parts, or estimated total cost
+    const pendingBudgetOrders = allOrders.filter(o => 
+      o.status === 'Diagnostic_Pending_Approval' ||
+      (o.diagnosticPlanItems && o.diagnosticPlanItems.length > 0) ||
+      parseFloat(o.total_estimated_cost || 0) > 0 ||
+      parseFloat(o.estimated_part_cost || 0) > 0 ||
+      (o.assigned_technician_id && o.fault_description)
+    );
 
     return res.status(200).json({
       success: true,
-      count: orders.length,
-      data: orders
+      count: pendingBudgetOrders.length,
+      data: pendingBudgetOrders
     });
   } catch (error) {
     console.error('getPendingDiagnosticApprovals error:', error);

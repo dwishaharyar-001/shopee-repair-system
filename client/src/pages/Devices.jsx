@@ -108,6 +108,9 @@ const Devices = () => {
         return 'bg-amber-100 text-amber-800 border-amber-300';
       case 'Teknisi Assigned':
         return 'bg-indigo-100 text-indigo-800 border-indigo-300';
+      case 'Diagnostic_Pending_Approval':
+      case 'Approval Budget Pending':
+        return 'bg-purple-100 text-purple-800 border-purple-300';
       case 'In Repair':
         return 'bg-blue-100 text-blue-800 border-blue-300';
       case 'QC1 Pending':
@@ -118,7 +121,7 @@ const Devices = () => {
       case 'Released':
         return 'bg-emerald-100 text-emerald-800 border-emerald-300';
       default:
-        return 'bg-slate-100 text-slate-700 border-slate-300';
+        return 'bg-slate-100 text-slate-800 border-slate-300';
     }
   };
 
@@ -387,11 +390,15 @@ const Devices = () => {
                       </td>
                       <td className="py-3.5 px-4">
                         <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border ${getStatusBadgeClass(
-                          (row.status === 'Intake' || !row.status) && (row.assigned_technician_id || row.assignedTechnician)
+                          row.status === 'Diagnostic_Pending_Approval'
+                            ? 'Approval Budget Pending'
+                            : (row.status === 'Intake' || !row.status) && (row.assigned_technician_id || row.assignedTechnician)
                             ? 'Teknisi Assigned'
                             : row.status
                         )}`}>
-                          {(row.status === 'Intake' || !row.status) && (row.assigned_technician_id || row.assignedTechnician)
+                          {row.status === 'Diagnostic_Pending_Approval'
+                            ? 'Approval Budget Pending'
+                            : (row.status === 'Intake' || !row.status) && (row.assigned_technician_id || row.assignedTechnician)
                             ? 'Teknisi Assigned'
                             : row.status}
                         </span>
