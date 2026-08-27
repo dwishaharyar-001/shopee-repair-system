@@ -41,31 +41,16 @@ const ServiceOrder = sequelize.define('ServiceOrder', {
     allowNull: false
   },
   status: {
-    type: DataTypes.VIRTUAL,
-    get() {
-      return this.getDataValue('status') || 'Intake';
-    },
-    set(val) {
-      this.setDataValue('status', val || 'Intake');
-    }
+    type: DataTypes.STRING(50),
+    defaultValue: 'Intake'
   },
   bast_status: {
-    type: DataTypes.VIRTUAL,
-    get() {
-      return this.getDataValue('bast_status') || 'Pending_BAST';
-    },
-    set(val) {
-      this.setDataValue('bast_status', val || 'Pending_BAST');
-    }
+    type: DataTypes.STRING(50),
+    defaultValue: 'Pending_BAST'
   },
   sea_approval_decision: {
-    type: DataTypes.VIRTUAL,
-    get() {
-      return this.getDataValue('sea_approval_decision') || null;
-    },
-    set(val) {
-      this.setDataValue('sea_approval_decision', val || null);
-    }
+    type: DataTypes.STRING(50),
+    allowNull: true
   },
   assigned_technician_id: {
     type: DataTypes.INTEGER,
@@ -92,79 +77,64 @@ const ServiceOrder = sequelize.define('ServiceOrder', {
     allowNull: true
   },
   assigned_tech_at: {
-    type: DataTypes.VIRTUAL,
-    get() { return this.getDataValue('assigned_tech_at') || null; },
-    set(val) { this.setDataValue('assigned_tech_at', val); }
+    type: DataTypes.DATE,
+    allowNull: true
   },
   diagnostic_started_at: {
-    type: DataTypes.VIRTUAL,
-    get() { return this.getDataValue('diagnostic_started_at') || null; },
-    set(val) { this.setDataValue('diagnostic_started_at', val); }
+    type: DataTypes.DATE,
+    allowNull: true
   },
   diagnostic_submitted_at: {
-    type: DataTypes.VIRTUAL,
-    get() { return this.getDataValue('diagnostic_submitted_at') || null; },
-    set(val) { this.setDataValue('diagnostic_submitted_at', val); }
+    type: DataTypes.DATE,
+    allowNull: true
   },
   budget_approved_at: {
-    type: DataTypes.VIRTUAL,
-    get() { return this.getDataValue('budget_approved_at') || null; },
-    set(val) { this.setDataValue('budget_approved_at', val); }
+    type: DataTypes.DATE,
+    allowNull: true
   },
   budget_approved_by_user_id: {
-    type: DataTypes.VIRTUAL,
-    get() { return this.getDataValue('budget_approved_by_user_id') || null; },
-    set(val) { this.setDataValue('budget_approved_by_user_id', val); }
+    type: DataTypes.INTEGER,
+    allowNull: true
   },
   estimated_part_cost: {
-    type: DataTypes.VIRTUAL,
-    get() { return this.getDataValue('estimated_part_cost') || 0.00; },
-    set(val) { this.setDataValue('estimated_part_cost', val); }
+    type: DataTypes.DECIMAL(12, 2),
+    defaultValue: 0.00
   },
   estimated_service_cost: {
-    type: DataTypes.VIRTUAL,
-    get() { return this.getDataValue('estimated_service_cost') || 0.00; },
-    set(val) { this.setDataValue('estimated_service_cost', val); }
+    type: DataTypes.DECIMAL(12, 2),
+    defaultValue: 0.00
   },
   total_estimated_cost: {
-    type: DataTypes.VIRTUAL,
-    get() { return this.getDataValue('total_estimated_cost') || 0.00; },
-    set(val) { this.setDataValue('total_estimated_cost', val); }
+    type: DataTypes.DECIMAL(12, 2),
+    defaultValue: 0.00
   },
   harvest_reason: {
-    type: DataTypes.VIRTUAL,
-    get() { return this.getDataValue('harvest_reason') || null; },
-    set(val) { this.setDataValue('harvest_reason', val); }
+    type: DataTypes.TEXT,
+    allowNull: true
   },
   repair_started_at: {
-    type: DataTypes.VIRTUAL,
-    get() { return this.getDataValue('repair_started_at') || null; },
-    set(val) { this.setDataValue('repair_started_at', val); }
+    type: DataTypes.DATE,
+    allowNull: true
   },
   repair_finished_at: {
-    type: DataTypes.VIRTUAL,
-    get() { return this.getDataValue('repair_finished_at') || null; },
-    set(val) { this.setDataValue('repair_finished_at', val); }
+    type: DataTypes.DATE,
+    allowNull: true
   },
   qc1_started_at: {
-    type: DataTypes.VIRTUAL,
-    get() { return this.getDataValue('qc1_started_at') || null; },
-    set(val) { this.setDataValue('qc1_started_at', val); }
+    type: DataTypes.DATE,
+    allowNull: true
   },
   qc1_finished_at: {
-    type: DataTypes.VIRTUAL,
-    get() { return this.getDataValue('qc1_finished_at') || null; },
-    set(val) { this.setDataValue('qc1_finished_at', val); }
+    type: DataTypes.DATE,
+    allowNull: true
   },
   qc2_started_at: {
-    type: DataTypes.VIRTUAL,
-    get() { return this.getDataValue('qc2_started_at') || null; },
-    set(val) { this.setDataValue('qc2_started_at', val); }
+    type: DataTypes.DATE,
+    allowNull: true
   },
   qc2_finished_at: {
-    type: DataTypes.VIRTUAL,
-    get() { return this.getDataValue('qc2_finished_at') || null; },
-    set(val) { this.setDataValue('qc2_finished_at', val); }
+    type: DataTypes.DATE,
+    allowNull: true
   },
   notes: {
     type: DataTypes.TEXT,
