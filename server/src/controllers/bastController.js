@@ -44,6 +44,62 @@ const createBast = async (req, res) => {
       notes
     } = req.body;
 
+    const { sequelize } = require('../models');
+
+    // Auto-create missing BAST tables and columns in PostgreSQL if they don't exist
+    try {
+      await sequelize.query(`
+        CREATE TABLE IF NOT EXISTS bast_documents (
+          id SERIAL PRIMARY KEY,
+          bast_number VARCHAR(100) UNIQUE NOT NULL,
+          bast_type VARCHAR(20) DEFAULT '1',
+          intake_date DATE,
+          start_date DATE,
+          end_date DATE,
+          branch_id INTEGER,
+          status VARCHAR(50) DEFAULT 'Submitted_to_SEA',
+          first_party_user_id INTEGER,
+          first_party_title VARCHAR(255),
+          first_party_signature TEXT,
+          second_party_user_id INTEGER,
+          second_party_title VARCHAR(255),
+          second_party_signature TEXT,
+          rejection_reason TEXT,
+          notes TEXT,
+          submitted_at TIMESTAMP WITH TIME ZONE,
+          verified_at TIMESTAMP WITH TIME ZONE,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+    } catch (e) {}
+
+    try {
+      await sequelize.query(`
+        CREATE TABLE IF NOT EXISTS bast_items (
+          id SERIAL PRIMARY KEY,
+          bast_document_id INTEGER REFERENCES bast_documents(id) ON DELETE CASCADE,
+          service_order_id INTEGER,
+          device_id INTEGER,
+          verification_status VARCHAR(50) DEFAULT 'Pending',
+          verification_notes TEXT,
+          initial_physical_condition TEXT,
+          accessories TEXT,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+    } catch (e) {}
+
+    const firstPartyUserId = req.user ? req.user.id : null;
+    let signatureUrl = first_party_signature || null;
+    if (!signatureUrl && req.user) {
+      try {
+        const userObj = await User.findByPk(req.user.id);
+        signatureUrl = userObj?.signature_url || null;
+      } catch (e) {}
+    }
+
     // Find target Service Orders
     let orders = [];
     if (service_order_ids && service_order_ids.length > 0) {
