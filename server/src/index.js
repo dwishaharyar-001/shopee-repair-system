@@ -279,20 +279,40 @@ const initDatabase = async () => {
           WHERE bi.device_id = service_orders.device_id
         );
       `);
-      await sequelize.query(`
-        UPDATE service_orders 
-        SET assigned_technician_id = (
-          SELECT t.id 
-          FROM technicians t 
-          WHERE t.user_id = service_orders.assigned_technician_id
-        ) 
-        WHERE EXISTS (
-          SELECT 1 
-          FROM technicians t 
-          WHERE t.user_id = service_orders.assigned_technician_id
-        );
-      `);
-      console.log('✅ Synchronized service_orders bast_status & technician assignment.');
+      console.log('✅ Synchronized service_orders bast_status.');
+    } catch (e) {}
+
+    try {
+      const columns = [
+        "ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'Intake';",
+        "ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS bast_status VARCHAR(50) DEFAULT 'Pending_BAST';",
+        "ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS sea_approval_decision VARCHAR(50);",
+        "ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS assigned_technician_id INTEGER;",
+        "ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS received_by_user_id INTEGER;",
+        "ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS intake_date TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;",
+        "ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS released_date TIMESTAMP WITH TIME ZONE;",
+        "ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS assigned_tech_at TIMESTAMP WITH TIME ZONE;",
+        "ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS diagnostic_started_at TIMESTAMP WITH TIME ZONE;",
+        "ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS diagnostic_submitted_at TIMESTAMP WITH TIME ZONE;",
+        "ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS budget_approved_at TIMESTAMP WITH TIME ZONE;",
+        "ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS budget_approved_by_user_id INTEGER;",
+        "ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS estimated_part_cost NUMERIC(12,2) DEFAULT 0;",
+        "ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS estimated_service_cost NUMERIC(12,2) DEFAULT 0;",
+        "ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS total_estimated_cost NUMERIC(12,2) DEFAULT 0;",
+        "ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS harvest_reason TEXT;",
+        "ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS repair_started_at TIMESTAMP WITH TIME ZONE;",
+        "ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS repair_finished_at TIMESTAMP WITH TIME ZONE;",
+        "ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS qc1_started_at TIMESTAMP WITH TIME ZONE;",
+        "ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS qc1_finished_at TIMESTAMP WITH TIME ZONE;",
+        "ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS qc2_started_at TIMESTAMP WITH TIME ZONE;",
+        "ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS qc2_finished_at TIMESTAMP WITH TIME ZONE;",
+        "ALTER TABLE service_orders ADD COLUMN IF NOT EXISTS notes TEXT;"
+      ];
+
+      for (const q of columns) {
+        try { await sequelize.query(q); } catch (e) {}
+      }
+      console.log('✅ Ensured all service_orders table columns exist in PostgreSQL.');
     } catch (e) {}
 
     try {
