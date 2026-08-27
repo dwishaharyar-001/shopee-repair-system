@@ -11,9 +11,11 @@ let sequelize;
 // Priority 1: Use SQLite explicitly (Self-contained, fast, zero-dependency for VPS & Dev)
 if (process.env.USE_SQLITE === 'true') {
   const sqliteStoragePath = process.env.SQLITE_PATH || 
-    (require('fs').existsSync(path.join(__dirname, '../../arisa_repair.sqlite')) 
-      ? path.join(__dirname, '../../arisa_repair.sqlite') 
-      : path.join(__dirname, '../../shopee_repair.sqlite'));
+    (require('fs').existsSync(path.join(__dirname, '../../shopee_repair.sqlite')) 
+      ? path.join(__dirname, '../../shopee_repair.sqlite') 
+      : (require('fs').existsSync(path.join(__dirname, '../../arisa_repair.sqlite'))
+        ? path.join(__dirname, '../../arisa_repair.sqlite')
+        : path.join(__dirname, '../../shopee_repair.sqlite')));
   sequelize = new Sequelize({
     dialect: 'sqlite',
     storage: sqliteStoragePath,
@@ -58,9 +60,11 @@ else if (process.env.DB_HOST && process.env.DB_USER && process.env.DB_PASSWORD) 
 // Priority 4: Default SQLite Fallback (Zero-config fallback for VPS production)
 else {
   const sqliteStoragePath = process.env.SQLITE_PATH || 
-    (require('fs').existsSync(path.join(__dirname, '../../arisa_repair.sqlite')) 
-      ? path.join(__dirname, '../../arisa_repair.sqlite') 
-      : path.join(__dirname, '../../shopee_repair.sqlite'));
+    (require('fs').existsSync(path.join(__dirname, '../../shopee_repair.sqlite')) 
+      ? path.join(__dirname, '../../shopee_repair.sqlite') 
+      : (require('fs').existsSync(path.join(__dirname, '../../arisa_repair.sqlite'))
+        ? path.join(__dirname, '../../arisa_repair.sqlite')
+        : path.join(__dirname, '../../shopee_repair.sqlite')));
   sequelize = new Sequelize({
     dialect: 'sqlite',
     storage: sqliteStoragePath,
