@@ -59,58 +59,6 @@ const getServiceOrders = async (req, res) => {
     let deviceWhere = {};
     if (asset_type && asset_type !== 'all' && asset_type !== 'null') deviceWhere.asset_type = asset_type;
 
-    if (search && String(search).trim() !== '') {
-      const searchTerms = { [Op.like]: `%${String(search).trim()}%` };
-      whereClause[Op.or] = [
-        { service_id: searchTerms },
-        { '$device.serial_number$': searchTerms },
-        { '$device.device_id$': searchTerms },
-        { '$device.brand$': searchTerms },
-        { '$device.model$': searchTerms }
-      ];
-    }
-
-    try {
-      // 1. Sync by service_order_id
-      await sequelize.query(`
-        UPDATE service_orders 
-        SET bast_status = (
-          SELECT bd.status 
-          FROM bast_items bi 
-          JOIN bast_documents bd ON bi.bast_document_id = bd.id 
-          WHERE bi.service_order_id = service_orders.id 
-          ORDER BY bd.id DESC 
-          LIMIT 1
-        ) 
-        WHERE EXISTS (
-          SELECT 1 
-          FROM bast_items bi 
-          JOIN bast_documents bd ON bi.bast_document_id = bd.id 
-          WHERE bi.service_order_id = service_orders.id
-        );
-      `);
-      // 2. Sync by device_id
-      await sequelize.query(`
-        UPDATE service_orders 
-        SET bast_status = (
-          SELECT bd.status 
-          FROM bast_items bi 
-          JOIN bast_documents bd ON bi.bast_document_id = bd.id 
-          WHERE bi.device_id = service_orders.device_id 
-          ORDER BY bd.id DESC 
-          LIMIT 1
-        ) 
-        WHERE EXISTS (
-          SELECT 1 
-          FROM bast_items bi 
-          JOIN bast_documents bd ON bi.bast_document_id = bd.id 
-          WHERE bi.device_id = service_orders.device_id
-        );
-      `);
-    } catch (e) {
-      console.warn('BAST status sync warning:', e.message);
-    }
-
     let orders = [];
     try {
       orders = await ServiceOrder.findAll({
@@ -132,26 +80,38 @@ const getServiceOrders = async (req, res) => {
           },
           { model: User, as: 'receivedBy', attributes: ['id', 'full_name'], required: false }
         ],
-        order: [['created_at', 'DESC']]
+        order: [['id', 'DESC']]
       });
-    } catch (dbErr) {
-      console.error('ServiceOrder.findAll primary query error in getServiceOrders:', dbErr.message);
+    } catch (e1) {
+      console.error('getServiceOrders Level 1 query error:', e1.message);
       try {
         orders = await ServiceOrder.findAll({
-          where: whereClause,
           include: [{ model: Device, as: 'device', required: false }],
-          order: [['created_at', 'DESC']]
+          order: [['id', 'DESC']]
         });
-      } catch (dbErr2) {
-        console.error('ServiceOrder.findAll fallback query error:', dbErr2.message);
-        orders = await ServiceOrder.findAll({ order: [['created_at', 'DESC']] }).catch(() => []);
+      } catch (e2) {
+        console.error('getServiceOrders Level 2 query error:', e2.message);
+        orders = await ServiceOrder.findAll({ order: [['id', 'DESC']] }).catch(() => []);
       }
+    }
+
+    // In-memory search filtering if search term provided
+    if (search && String(search).trim() !== '') {
+      const q = String(search).trim().toLowerCase();
+      orders = orders.filter(o => {
+        const sId = (o.service_id || '').toLowerCase();
+        const dSn = (o.device?.serial_number || '').toLowerCase();
+        const dDevId = (o.device?.device_id || '').toLowerCase();
+        const dBrand = (o.device?.brand || '').toLowerCase();
+        const dModel = (o.device?.model || '').toLowerCase();
+        return sId.includes(q) || dSn.includes(q) || dDevId.includes(q) || dBrand.includes(q) || dModel.includes(q);
+      });
     }
 
     // Calculate Summary Stats
     const totalCount = orders.length;
-    const intakeCount = orders.filter(o => o.status === 'Intake').length;
-    const inRepairCount = orders.filter(o => o.status === 'In Repair').length;
+    const intakeCount = orders.filter(o => (o.status || 'Intake') === 'Intake' || o.status === 'Teknisi Assigned').length;
+    const inRepairCount = orders.filter(o => o.status === 'In Repair' || o.status === 'Diagnostic_Pending_Approval').length;
     const qcPendingCount = orders.filter(o => o.status === 'QC1 Pending' || o.status === 'QC2 Pending').length;
     const releasedCount = orders.filter(o => o.status === 'Released').length;
 
@@ -167,7 +127,9 @@ const getServiceOrders = async (req, res) => {
     } catch (e) {}
 
     const formattedOrders = orders.map(order => {
-      const plainOrder = order.get({ plain: true });
+      const plainOrder = typeof order.get === 'function' ? order.get({ plain: true }) : { ...order };
+
+      if (!plainOrder.status) plainOrder.status = 'Intake';
 
       // Match order against BAST documents
       let matchingBast = null;
