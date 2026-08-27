@@ -75,13 +75,14 @@ const getWorkQueue = async (req, res) => {
       orders = await ServiceOrder.findAll({
         where: whereClause,
         include: [
-          { model: Device, as: 'device' },
-          { model: Customer, as: 'customer', attributes: ['id', 'customer_code', 'name'] },
-          { model: Branch, as: 'branch', attributes: ['id', 'name', 'code', 'address'] },
+          { model: Device, as: 'device', required: false },
+          { model: Customer, as: 'customer', attributes: ['id', 'customer_code', 'name'], required: false },
+          { model: Branch, as: 'branch', attributes: ['id', 'name', 'code', 'address'], required: false },
           {
             model: Technician,
             as: 'assignedTechnician',
-            include: [{ model: User, as: 'user', attributes: ['id', 'full_name'] }]
+            required: false,
+            include: [{ model: User, as: 'user', attributes: ['id', 'full_name'], required: false }]
           }
         ],
         order: [['created_at', 'DESC']]

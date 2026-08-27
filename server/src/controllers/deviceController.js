@@ -117,16 +117,18 @@ const getServiceOrders = async (req, res) => {
         {
           model: Device,
           as: 'device',
+          required: false,
           where: Object.keys(deviceWhere).length > 0 ? deviceWhere : undefined
         },
-        { model: Customer, as: 'customer', attributes: ['id', 'customer_code', 'name'] },
-        { model: Branch, as: 'branch', attributes: ['id', 'name', 'code', 'address'] },
+        { model: Customer, as: 'customer', attributes: ['id', 'customer_code', 'name'], required: false },
+        { model: Branch, as: 'branch', attributes: ['id', 'name', 'code', 'address'], required: false },
         {
           model: Technician,
           as: 'assignedTechnician',
-          include: [{ model: User, as: 'user', attributes: ['id', 'full_name'] }]
+          required: false,
+          include: [{ model: User, as: 'user', attributes: ['id', 'full_name'], required: false }]
         },
-        { model: User, as: 'receivedBy', attributes: ['id', 'full_name'] }
+        { model: User, as: 'receivedBy', attributes: ['id', 'full_name'], required: false }
       ],
       order: [['created_at', 'DESC']]
     });
